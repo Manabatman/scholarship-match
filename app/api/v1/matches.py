@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException
 from app.api.v1.profiles import _get_store
+from app.api.v1.scoring import score_scholarship
 
 router = APIRouter()
 
-# Phase 1: hardcoded scholarship data (in-memory, not DB)
 SCHOLARSHIPS = [
     {
         "id": "CHED_CMSP",
@@ -28,8 +28,19 @@ SCHOLARSHIPS = [
 @router.get("/matches/{profile_id}")
 def get_matches(profile_id: str):
     profiles = _get_store()
-    if profile_id not in profiles:
-        raise HTTPException(status_code=404, detail="profile not found")
 
-    # Phase 1 behavior: always return top 3 dummy scholarships
-    return {"matches": SCHOLARSHIPS}
+    if profile_id not in profiles:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    profile = profiles[profile_id]
+    results = []
+
+    for scholarship in SCHOLARSHIPS:
+        final_score = score_scholarship(profile, scholarship)
+
+        results.append({
+            **scholarship,
+            "score": final_score
+        })
+
+    return {"matches": results}
