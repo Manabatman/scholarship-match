@@ -1,14 +1,23 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import List, Optional
+
 
 class StudentProfile(BaseModel):
-    name: str
-    gpa: Optional[float] = None
-    major: Optional[str] = None
-    financial_need: Optional[float] = None
-    # Add other relevant fields as needed
+    full_name: str
+    email: str
+    age: Optional[int] = None
+    region: Optional[str] = None
+    school: Optional[str] = None
+    needs: Optional[List[str]] = []
 
-class MatchItem(BaseModel):
-    name: str
-    link: str
-    score: int
+
+class Scholarship(BaseModel):
+    title: str
+    provider: Optional[str] = None
+    countries: Optional[List[str]] = []
+    regions: Optional[List[str]] = []
+    min_age: Optional[int] = None
+    max_age: Optional[int] = None
+    needs_tags: Optional[List[str]] = []
+    link: Optional[str] = None
+    description: Optional[str] = None
