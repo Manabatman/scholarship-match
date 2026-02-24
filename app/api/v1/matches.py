@@ -1,46 +1,58 @@
-from fastapi import APIRouter, HTTPException
-from app.api.v1.profiles import _get_store
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.orm import Session
+import json
+
+from app import models
+from app.db import get_db
+from app.api.v1.profiles import get_profile_dict
 from app.api.v1.scoring import score_scholarship
 
 router = APIRouter()
 
-SCHOLARSHIPS = [
-    {
-        "id": "CHED_CMSP",
-        "name": "CHED Merit Scholarship Program",
-        "link": "https://ched.gov.ph",
-        "score": 90
-    },
-    {
-        "id": "DOST_SEI",
-        "name": "DOST-SEI Undergraduate Scholarship",
-        "link": "https://ugs.science-scholarships.ph",
-        "score": 85
-    },
-    {
-        "id": "SM_FOUNDATION",
-        "name": "SM Foundation College Scholarship",
-        "link": "https://sm-foundation.org",
-        "score": 80
-    }
-]
 
 @router.get("/matches/{profile_id}")
-def get_matches(profile_id: str):
-    profiles = _get_store()
-
-    if profile_id not in profiles:
+def get_matches(profile_id: int, db: Session = Depends(get_db)):
+    profile = get_profile_dict(profile_id, db)
+    
+    if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
 
-    profile = profiles[profile_id]
+    # Get all scholarships from database
+    scholarships = db.query(models.Scholarship).all()
     results = []
 
-    for scholarship in SCHOLARSHIPS:
-        final_score = score_scholarship(profile, scholarship)
+    for scholarship in scholarships:
+        # Convert scholarship to dict format
+        scholarship_dict = {
+            "id": scholarship.id,
+            "title": scholarship.title,
+            "provider": scholarship.provider,
+            "link": scholarship.link,
+            "description": scholarship.description,
+            "countries": scholarship.countries.split(",") if scholarship.countries else [],
+            "regions": scholarship.regions.split(",") if scholarship.regions else [],
+            "min_age": scholarship.min_age,
+            "max_age": scholarship.max_age,
+            "needs_tags": json.loads(scholarship.needs_tags) if scholarship.needs_tags else [],
+            "score": 50,  # Base score
+        }
+        
+        # Calculate match score
+        final_score = score_scholarship(profile, scholarship_dict)
 
         results.append({
-            **scholarship,
-            "score": final_score
+            "id": scholarship.id,
+            "title": scholarship.title,
+            "provider": scholarship.provider,
+            "score": final_score,
+            "link": scholarship.link,
+            "description": scholarship.description,
+            "regions": scholarship.regions.split(",") if scholarship.regions else [],
+            "min_age": scholarship.min_age,
+            "max_age": scholarship.max_age,
         })
 
+    # Sort by score descending
+    results.sort(key=lambda x: x["score"], reverse=True)
+    
     return {"matches": results}

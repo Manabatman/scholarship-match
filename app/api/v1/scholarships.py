@@ -8,7 +8,7 @@ from app.db import get_db
 router = APIRouter()
 
 
-@router.post("/scholarships")
+@router.post("/scholarships", response_model=schemas.ScholarshipResponse)
 def create_scholarship(
     scholarship: schemas.Scholarship,
     db: Session = Depends(get_db),
@@ -27,10 +27,22 @@ def create_scholarship(
     db.add(db_scholarship)
     db.commit()
     db.refresh(db_scholarship)
-    return {"id": db_scholarship.id}
+    
+    return {
+        "id": db_scholarship.id,
+        "title": db_scholarship.title,
+        "provider": db_scholarship.provider,
+        "countries": db_scholarship.countries.split(",") if db_scholarship.countries else [],
+        "regions": db_scholarship.regions.split(",") if db_scholarship.regions else [],
+        "min_age": db_scholarship.min_age,
+        "max_age": db_scholarship.max_age,
+        "needs_tags": json.loads(db_scholarship.needs_tags) if db_scholarship.needs_tags else [],
+        "link": db_scholarship.link,
+        "description": db_scholarship.description,
+    }
 
 
-@router.get("/scholarships")
+@router.get("/scholarships", response_model=list[schemas.ScholarshipResponse])
 def list_scholarships(db: Session = Depends(get_db)):
     scholarships = db.query(models.Scholarship).all()
     return [
