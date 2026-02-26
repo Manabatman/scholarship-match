@@ -133,3 +133,71 @@ def test_score_clamped_to_0():
     }
     score = score_scholarship(profile, scholarship)
     assert score == 0  # 0 - 30 - 10 - 5 = -45, clamped to 0
+
+
+def test_region_alias_ncr_metro_manila():
+    """NCR matches Metro Manila via region alias."""
+    profile = {"age": 20, "region": "NCR", "needs": []}
+    scholarship = {
+        "score": 50,
+        "regions": ["Metro Manila"],
+        "min_age": None,
+        "max_age": None,
+        "needs_tags": [],
+    }
+    score = score_scholarship(profile, scholarship)
+    assert score == 75  # 50 + 25 (region match via alias)
+
+
+def test_needs_substring_financial():
+    """Profile need 'financial' matches scholarship tag 'Financial Aid'."""
+    profile = {"age": 20, "region": "NCR", "needs": ["financial"]}
+    scholarship = {
+        "score": 50,
+        "regions": ["Metro Manila"],
+        "min_age": None,
+        "max_age": None,
+        "needs_tags": ["Financial Aid"],
+    }
+    score = score_scholarship(profile, scholarship)
+    assert score == 85  # 50 + 25 (region) + 10 (needs substring match)
+
+
+def test_education_level_match():
+    """Score boosts when education level matches."""
+    profile = {
+        "age": 20,
+        "region": "NCR",
+        "needs": [],
+        "education_level": "College",
+    }
+    scholarship = {
+        "score": 50,
+        "regions": ["Metro Manila"],
+        "min_age": None,
+        "max_age": None,
+        "needs_tags": [],
+        "level": "College",
+    }
+    score = score_scholarship(profile, scholarship)
+    assert score == 90  # 50 + 25 (region) + 15 (level)
+
+
+def test_education_level_mismatch():
+    """Score drops when education level mismatches."""
+    profile = {
+        "age": 20,
+        "region": "NCR",
+        "needs": [],
+        "education_level": "Graduate",
+    }
+    scholarship = {
+        "score": 50,
+        "regions": ["Metro Manila"],
+        "min_age": None,
+        "max_age": None,
+        "needs_tags": [],
+        "level": "College",
+    }
+    score = score_scholarship(profile, scholarship)
+    assert score == 55  # 50 + 25 (region) - 20 (level mismatch)

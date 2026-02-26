@@ -1,4 +1,4 @@
-﻿from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy import Column, Integer, String, Text
 from app.db import Base
 
 class Student(Base):
@@ -10,6 +10,7 @@ class Student(Base):
     region = Column(String)
     school = Column(String)
     needs = Column(Text)  # JSON-encoded list
+    education_level = Column(String)  # High School, College, TVET, Graduate
 
 class Scholarship(Base):
     __tablename__ = "scholarships"
@@ -21,5 +22,6 @@ class Scholarship(Base):
     min_age = Column(Integer)
     max_age = Column(Integer)
     needs_tags = Column(Text)   # JSON-encoded list
+    level = Column(String)     # High School, College, TVET, Graduate
     link = Column(String)
     description = Column(Text)

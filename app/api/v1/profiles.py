@@ -8,13 +8,33 @@ from app.db import get_db
 router = APIRouter()
 
 
+def _profile_to_response(p):
+    return {
+        "id": p.id,
+        "full_name": p.full_name,
+        "email": p.email,
+        "age": p.age,
+        "region": p.region,
+        "school": p.school,
+        "needs": json.loads(p.needs) if p.needs else [],
+        "education_level": p.education_level,
+    }
+
+
 @router.post("/profiles", response_model=schemas.StudentProfileResponse)
 def create_profile(profile: schemas.StudentProfile, db: Session = Depends(get_db)):
-    # Check if email already exists
     existing = db.query(models.Student).filter(models.Student.email == profile.email).first()
     if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    
+        existing.full_name = profile.full_name
+        existing.age = profile.age
+        existing.region = profile.region
+        existing.school = profile.school
+        existing.needs = json.dumps(profile.needs or [])
+        existing.education_level = profile.education_level
+        db.commit()
+        db.refresh(existing)
+        return _profile_to_response(existing)
+
     db_profile = models.Student(
         full_name=profile.full_name,
         email=profile.email,
@@ -22,20 +42,12 @@ def create_profile(profile: schemas.StudentProfile, db: Session = Depends(get_db
         region=profile.region,
         school=profile.school,
         needs=json.dumps(profile.needs or []),
+        education_level=profile.education_level,
     )
     db.add(db_profile)
     db.commit()
     db.refresh(db_profile)
-    
-    return {
-        "id": db_profile.id,
-        "full_name": db_profile.full_name,
-        "email": db_profile.email,
-        "age": db_profile.age,
-        "region": db_profile.region,
-        "school": db_profile.school,
-        "needs": json.loads(db_profile.needs) if db_profile.needs else [],
-    }
+    return _profile_to_response(db_profile)
 
 
 @router.get("/profiles/{profile_id}", response_model=schemas.StudentProfileResponse)
@@ -52,6 +64,7 @@ def get_profile(profile_id: int, db: Session = Depends(get_db)):
         "region": profile.region,
         "school": profile.school,
         "needs": json.loads(profile.needs) if profile.needs else [],
+        "education_level": profile.education_level,
     }
 
 
@@ -69,4 +82,5 @@ def get_profile_dict(profile_id: int, db: Session) -> dict:
         "region": profile.region,
         "school": profile.school,
         "needs": json.loads(profile.needs) if profile.needs else [],
+        "education_level": profile.education_level,
     }

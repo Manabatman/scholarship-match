@@ -12,7 +12,39 @@ const REQUIRED_FIELDS = [
   "age",
   "region",
   "school",
-  "needs"
+  "needs",
+  "education_level",
+] as const;
+
+const NEEDS_TAGS = [
+  "Financial Aid",
+  "Merit-based",
+  "STEM",
+  "Engineering",
+  "Science",
+  "Agriculture",
+  "Leadership",
+  "Underprivileged",
+  "First-gen",
+  "Housing",
+  "Books",
+  "OFW Dependent",
+  "GSIS Dependent",
+  "Arts",
+  "Athletics",
+  "Business",
+  "IT",
+  "Education",
+  "Medical",
+  "Vocational/TVET",
+] as const;
+
+const EDUCATION_LEVELS = [
+  { value: "", label: "Select education level" },
+  { value: "High School", label: "High School" },
+  { value: "College", label: "College" },
+  { value: "TVET", label: "TVET" },
+  { value: "Graduate", label: "Graduate" },
 ] as const;
 
 function countFilledFields(values: Record<string, string>): number {
@@ -25,6 +57,7 @@ function countFilledFields(values: Record<string, string>): number {
   const needsStr = (values.needs ?? "").trim();
   if (needsStr.length > 0 && needsStr.split(",").some((n) => n.trim().length > 0))
     count++;
+  if ((values.education_level ?? "").trim().length > 0) count++;
   return count;
 }
 
@@ -35,8 +68,21 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
     age: "",
     region: "",
     school: "",
-    needs: ""
+    needs: "",
+    education_level: "",
   });
+
+  const selectedNeeds = (values.needs ?? "")
+    .split(",")
+    .map((n) => n.trim())
+    .filter(Boolean);
+
+  const toggleNeed = (tag: string) => {
+    const next = selectedNeeds.includes(tag)
+      ? selectedNeeds.filter((t) => t !== tag)
+      : [...selectedNeeds, tag];
+    setValues((prev) => ({ ...prev, needs: next.join(", ") }));
+  };
 
   const filledCount = countFilledFields(values);
   const strengthPercent = Math.round((filledCount / REQUIRED_FIELDS.length) * 100);
@@ -178,6 +224,29 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                     placeholder="e.g. NCR, Visayas, Mindanao"
                   />
                 </div>
+                <div>
+                  <label
+                    htmlFor="education_level"
+                    className="block text-sm font-medium text-slate-700"
+                  >
+                    Education Level
+                  </label>
+                  <select
+                    id="education_level"
+                    name="education_level"
+                    value={values.education_level}
+                    onChange={(e) =>
+                      handleChange("education_level", e.target.value)
+                    }
+                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                  >
+                    {EDUCATION_LEVELS.map((opt) => (
+                      <option key={opt.value || "empty"} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -186,23 +255,33 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                 Needs & Background
               </h3>
               <div>
-                <label
-                  htmlFor="needs"
-                  className="block text-sm font-medium text-slate-700"
-                >
+                <label className="block text-sm font-medium text-slate-700">
                   Needs / tags
                 </label>
-                <textarea
-                  id="needs"
+                <input
+                  type="hidden"
                   name="needs"
-                  rows={3}
                   value={values.needs}
-                  onChange={(e) => handleChange("needs", e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                  placeholder="Comma-separated, e.g. financial, housing, STEM, first-gen"
                 />
-                <p className="mt-1 text-xs text-slate-500">
-                  We use these tags to match you with relevant scholarships.
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {NEEDS_TAGS.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => toggleNeed(tag)}
+                      className={`rounded-full px-3 py-1.5 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                        selectedNeeds.includes(tag)
+                          ? "bg-primary-600 text-white"
+                          : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  Click to select your needs. We use these tags to match you with
+                  relevant scholarships.
                 </p>
               </div>
             </div>

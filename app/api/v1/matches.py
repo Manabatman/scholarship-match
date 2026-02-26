@@ -34,6 +34,7 @@ def get_matches(profile_id: int, db: Session = Depends(get_db)):
             "min_age": scholarship.min_age,
             "max_age": scholarship.max_age,
             "needs_tags": json.loads(scholarship.needs_tags) if scholarship.needs_tags else [],
+            "level": getattr(scholarship, "level", None),
             "score": 50,  # Base score
         }
         

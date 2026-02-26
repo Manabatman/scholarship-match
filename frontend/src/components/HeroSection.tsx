@@ -25,16 +25,42 @@ export function HeroSection({ onCtaClick }: HeroSectionProps) {
           </div>
           <div className="flex items-center justify-center">
             <div className="h-64 w-full max-w-sm rounded-2xl border border-slate-200 bg-primary-50 shadow-lg sm:h-80">
-              <div className="flex h-full items-center justify-center">
-                <div className="grid grid-cols-3 gap-2 p-8">
-                  {[...Array(9)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="aspect-square rounded-lg bg-primary-200/60"
-                      aria-hidden
-                    />
-                  ))}
-                </div>
+              <div className="flex h-full items-center justify-center p-8">
+                <svg
+                  viewBox="0 0 160 140"
+                  className="h-full w-full text-primary-600"
+                  aria-hidden
+                >
+                  <path
+                    d="M80 15 L25 42 L80 70 L135 42 Z"
+                    fill="currentColor"
+                    opacity="0.9"
+                  />
+                  <path
+                    d="M70 70 L80 75 L90 70 L80 65 Z"
+                    fill="currentColor"
+                  />
+                  <line
+                    x1="80"
+                    y1="75"
+                    x2="80"
+                    y2="115"
+                    stroke="currentColor"
+                    strokeWidth="5"
+                    strokeLinecap="round"
+                  />
+                  <circle cx="80" cy="120" r="10" fill="currentColor" opacity="0.7" />
+                  <ellipse
+                    cx="80"
+                    cy="95"
+                    rx="55"
+                    ry="12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    opacity="0.5"
+                  />
+                </svg>
               </div>
             </div>
           </div>

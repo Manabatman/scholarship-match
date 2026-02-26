@@ -1,4 +1,10 @@
-export function Navbar() {
+interface NavbarProps {
+  onBuildProfile: () => void;
+  onScholarships: () => void;
+  onAbout: () => void;
+}
+
+export function Navbar({ onBuildProfile, onScholarships, onAbout }: NavbarProps) {
   return (
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
@@ -9,27 +15,30 @@ export function Navbar() {
           </p>
         </div>
         <nav className="hidden items-center gap-6 sm:flex">
-          <a
-            href="#profile"
-            className="text-sm text-slate-600 transition hover:text-primary-600"
+          <button
+            type="button"
+            onClick={onBuildProfile}
+            className="text-sm text-slate-600 transition hover:text-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded"
             aria-label="Build Profile"
           >
             Build Profile
-          </a>
-          <a
-            href="#scholarships"
-            className="text-sm text-slate-600 transition hover:text-primary-600"
+          </button>
+          <button
+            type="button"
+            onClick={onScholarships}
+            className="text-sm text-slate-600 transition hover:text-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded"
             aria-label="Scholarships"
           >
             Scholarships
-          </a>
-          <a
-            href="#about"
-            className="text-sm text-slate-600 transition hover:text-primary-600"
+          </button>
+          <button
+            type="button"
+            onClick={onAbout}
+            className="text-sm text-slate-600 transition hover:text-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded"
             aria-label="About"
           >
             About
-          </a>
+          </button>
         </nav>
       </div>
     </header>

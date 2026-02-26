@@ -4,12 +4,13 @@ import { Navbar } from "./components/Navbar";
 import { HeroSection } from "./components/HeroSection";
 import { ProfileForm } from "./components/ProfileForm";
 import { MatchResults } from "./components/MatchResults";
+import { ScholarshipList } from "./components/ScholarshipList";
 import { Footer } from "./components/Footer";
 
 const API_BASE_URL =
   (import.meta as any).env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
-type Step = "profile" | "results";
+type Step = "profile" | "results" | "scholarships";
 
 function App() {
   const [step, setStep] = useState<Step>("profile");
@@ -34,7 +35,8 @@ function App() {
         needs: String(formData.get("needs") ?? "")
           .split(",")
           .map((n) => n.trim())
-          .filter(Boolean)
+          .filter(Boolean),
+        education_level: String(formData.get("education_level") ?? "").trim() || undefined,
       };
 
       try {
@@ -83,9 +85,37 @@ function App() {
     setError(null);
   }, []);
 
+  const goToScholarships = useCallback(() => {
+    setStep("scholarships");
+  }, []);
+
+  const goToProfile = useCallback(() => {
+    setStep("profile");
+    setError(null);
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <Navbar />
+      <Navbar
+        onBuildProfile={
+          step === "profile"
+            ? scrollToProfile
+            : step === "scholarships"
+              ? goToProfile
+              : resetToProfile
+        }
+        onScholarships={
+          step === "scholarships"
+            ? () =>
+                document
+                  .getElementById("scholarships")
+                  ?.scrollIntoView({ behavior: "smooth" })
+            : goToScholarships
+        }
+        onAbout={() =>
+          document.getElementById("about")?.scrollIntoView({ behavior: "smooth" })
+        }
+      />
       <main className="bg-slate-50">
         {step === "profile" && (
           <>
@@ -99,6 +129,9 @@ function App() {
         )}
         {step === "results" && (
           <MatchResults matches={matches} onReset={resetToProfile} />
+        )}
+        {step === "scholarships" && (
+          <ScholarshipList onBuildProfile={goToProfile} />
         )}
       </main>
       <Footer />

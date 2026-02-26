@@ -9,6 +9,7 @@ class StudentProfile(BaseModel):
     region: Optional[str] = None
     school: Optional[str] = None
     needs: Optional[List[str]] = []
+    education_level: Optional[str] = None  # High School, College, TVET, Graduate
 
 
 class StudentProfileResponse(BaseModel):
@@ -19,6 +20,7 @@ class StudentProfileResponse(BaseModel):
     region: Optional[str] = None
     school: Optional[str] = None
     needs: Optional[List[str]] = []
+    education_level: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -32,6 +34,7 @@ class Scholarship(BaseModel):
     min_age: Optional[int] = None
     max_age: Optional[int] = None
     needs_tags: Optional[List[str]] = []
+    level: Optional[str] = None  # High School, College, TVET, Graduate
     link: Optional[str] = None
     description: Optional[str] = None
 
@@ -45,6 +48,7 @@ class ScholarshipResponse(BaseModel):
     min_age: Optional[int] = None
     max_age: Optional[int] = None
     needs_tags: Optional[List[str]] = []
+    level: Optional[str] = None
     link: Optional[str] = None
     description: Optional[str] = None
 

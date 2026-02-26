@@ -55,6 +55,7 @@ def list_scholarships(db: Session = Depends(get_db)):
             "min_age": s.min_age,
             "max_age": s.max_age,
             "needs_tags": json.loads(s.needs_tags) if s.needs_tags else [],
+            "level": getattr(s, "level", None),
             "link": s.link,
             "description": s.description,
         }
