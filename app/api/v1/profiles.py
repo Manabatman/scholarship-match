@@ -21,6 +21,12 @@ def _profile_to_response(p):
     }
 
 
+@router.get("/profiles", response_model=list[schemas.StudentProfileResponse])
+def list_profiles(db: Session = Depends(get_db)):
+    profiles = db.query(models.Student).all()
+    return [_profile_to_response(p) for p in profiles]
+
+
 @router.post("/profiles", response_model=schemas.StudentProfileResponse)
 def create_profile(profile: schemas.StudentProfile, db: Session = Depends(get_db)):
     existing = db.query(models.Student).filter(models.Student.email == profile.email).first()

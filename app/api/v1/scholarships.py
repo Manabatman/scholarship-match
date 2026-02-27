@@ -21,6 +21,7 @@ def create_scholarship(
         min_age=scholarship.min_age,
         max_age=scholarship.max_age,
         needs_tags=json.dumps(scholarship.needs_tags or []),
+        level=scholarship.level,
         link=scholarship.link,
         description=scholarship.description,
     )
@@ -37,6 +38,7 @@ def create_scholarship(
         "min_age": db_scholarship.min_age,
         "max_age": db_scholarship.max_age,
         "needs_tags": json.loads(db_scholarship.needs_tags) if db_scholarship.needs_tags else [],
+        "level": getattr(db_scholarship, "level", None),
         "link": db_scholarship.link,
         "description": db_scholarship.description,
     }

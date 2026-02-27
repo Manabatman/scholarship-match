@@ -1,4 +1,7 @@
 import { FormEvent, useState } from "react";
+import { NeedsCategoryAccordion } from "./NeedsCategoryAccordion";
+import { SelectedChips } from "./SelectedChips";
+import { NEEDS_CATEGORIES } from "../constants/needsCategories";
 
 interface ProfileFormProps {
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -14,29 +17,6 @@ const REQUIRED_FIELDS = [
   "school",
   "needs",
   "education_level",
-] as const;
-
-const NEEDS_TAGS = [
-  "Financial Aid",
-  "Merit-based",
-  "STEM",
-  "Engineering",
-  "Science",
-  "Agriculture",
-  "Leadership",
-  "Underprivileged",
-  "First-gen",
-  "Housing",
-  "Books",
-  "OFW Dependent",
-  "GSIS Dependent",
-  "Arts",
-  "Athletics",
-  "Business",
-  "IT",
-  "Education",
-  "Medical",
-  "Vocational/TVET",
 ] as const;
 
 const EDUCATION_LEVELS = [
@@ -263,25 +243,26 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                   name="needs"
                   value={values.needs}
                 />
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {NEEDS_TAGS.map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => toggleNeed(tag)}
-                      className={`rounded-full px-3 py-1.5 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-                        selectedNeeds.includes(tag)
-                          ? "bg-primary-600 text-white"
-                          : "bg-slate-200 text-slate-700 hover:bg-slate-300"
-                      }`}
-                    >
-                      {tag}
-                    </button>
-                  ))}
+                <div className="mt-2 space-y-3">
+                  <div>
+                    <p className="mb-2 text-xs font-medium text-slate-500">
+                      Selected
+                    </p>
+                    <SelectedChips
+                      selected={selectedNeeds}
+                      onRemove={toggleNeed}
+                      emptyMessage="Expand a category below to select needs"
+                    />
+                  </div>
+                  <NeedsCategoryAccordion
+                    categories={NEEDS_CATEGORIES}
+                    selected={selectedNeeds}
+                    onToggle={toggleNeed}
+                  />
                 </div>
-                <p className="mt-2 text-xs text-slate-500">
-                  Click to select your needs. We use these tags to match you with
-                  relevant scholarships.
+                <p className="mt-3 text-xs text-slate-500">
+                  Click categories to expand and select your needs. We use these
+                  tags to match you with relevant scholarships.
                 </p>
               </div>
             </div>
