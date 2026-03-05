@@ -26,17 +26,52 @@ function App() {
 
       const formData = new FormData(event.currentTarget);
 
+      const getStr = (k: string) => String(formData.get(k) ?? "").trim() || undefined;
+      const getNum = (k: string) => {
+        const v = formData.get(k);
+        if (v === null || v === "") return undefined;
+        const n = Number(v);
+        return isNaN(n) ? undefined : n;
+      };
+      const getBool = (k: string) => formData.get(k) === "on";
+      const getList = (k: string) =>
+        String(formData.get(k) ?? "")
+          .split(",")
+          .map((n) => n.trim())
+          .filter(Boolean);
+
       const profile: StudentProfile = {
         full_name: String(formData.get("full_name") ?? ""),
         email: String(formData.get("email") ?? ""),
-        age: Number(formData.get("age") ?? 0),
-        region: String(formData.get("region") ?? ""),
-        school: String(formData.get("school") ?? ""),
-        needs: String(formData.get("needs") ?? "")
-          .split(",")
-          .map((n) => n.trim())
-          .filter(Boolean),
-        education_level: String(formData.get("education_level") ?? "").trim() || undefined,
+        age: getNum("age"),
+        region: getStr("region"),
+        school: getStr("school"),
+        needs: getList("needs"),
+        education_level: getStr("education_level"),
+        gender: getStr("gender"),
+        current_academic_stage: getStr("current_academic_stage"),
+        target_academic_year: getStr("target_academic_year"),
+        province: getStr("province"),
+        city_municipality: getStr("city_municipality"),
+        barangay: getStr("barangay"),
+        school_type: getStr("school_type"),
+        target_school: getStr("target_school"),
+        gwa_raw: getStr("gwa_raw"),
+        gwa_scale: getStr("gwa_scale"),
+        field_of_study_broad: getStr("field_of_study_broad"),
+        field_of_study_specific: getStr("field_of_study_specific"),
+        extracurriculars: getList("extracurriculars"),
+        awards: getList("awards"),
+        household_income_annual: getNum("household_income_annual"),
+        income_bracket: getStr("income_bracket"),
+        is_underprivileged: getBool("is_underprivileged"),
+        is_pwd: getBool("is_pwd"),
+        is_indigenous_people: getBool("is_indigenous_people"),
+        is_solo_parent_dependent: getBool("is_solo_parent_dependent"),
+        is_ofw_dependent: getBool("is_ofw_dependent"),
+        is_farmer_fisher_dependent: getBool("is_farmer_fisher_dependent"),
+        is_4ps_listahanan: getBool("is_4ps_listahanan"),
+        parent_occupation: getStr("parent_occupation"),
       };
 
       try {

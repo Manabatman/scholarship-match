@@ -1,7 +1,7 @@
 import { FormEvent, useState } from "react";
 import { NeedsCategoryAccordion } from "./NeedsCategoryAccordion";
 import { SelectedChips } from "./SelectedChips";
-import { NEEDS_CATEGORIES } from "../constants/needsCategories";
+import { NEEDS_CATEGORIES, EQUITY_GROUPS, INCOME_BRACKETS } from "../constants/needsCategories";
 
 interface ProfileFormProps {
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -9,47 +9,84 @@ interface ProfileFormProps {
   error: string | null;
 }
 
-const REQUIRED_FIELDS = [
-  "full_name",
-  "email",
-  "age",
-  "region",
-  "school",
-  "needs",
-  "education_level",
-] as const;
-
+const STEPS = 5;
 const EDUCATION_LEVELS = [
   { value: "", label: "Select education level" },
+  { value: "Grade 11", label: "Grade 11" },
+  { value: "Grade 12", label: "Grade 12" },
   { value: "High School", label: "High School" },
   { value: "College", label: "College" },
   { value: "TVET", label: "TVET" },
   { value: "Graduate", label: "Graduate" },
 ] as const;
 
-function countFilledFields(values: Record<string, string>): number {
-  let count = 0;
-  if ((values.full_name ?? "").trim().length > 0) count++;
-  if ((values.email ?? "").trim().length > 0) count++;
-  if ((values.age ?? "").trim().length > 0 && Number(values.age) > 0) count++;
-  if ((values.region ?? "").trim().length > 0) count++;
-  if ((values.school ?? "").trim().length > 0) count++;
-  const needsStr = (values.needs ?? "").trim();
-  if (needsStr.length > 0 && needsStr.split(",").some((n) => n.trim().length > 0))
-    count++;
-  if ((values.education_level ?? "").trim().length > 0) count++;
-  return count;
-}
+const ACADEMIC_STAGES = [
+  { value: "", label: "Select stage" },
+  { value: "Junior HS", label: "Junior High School" },
+  { value: "Senior HS", label: "Senior High School" },
+  { value: "Undergraduate", label: "College Undergraduate" },
+  { value: "Postgraduate", label: "Postgraduate" },
+  { value: "TVET", label: "TVET" },
+  { value: "ALS", label: "ALS Completer" },
+] as const;
+
+const SCHOOL_TYPES = [
+  { value: "", label: "Select" },
+  { value: "Public", label: "Public" },
+  { value: "Private", label: "Private" },
+] as const;
+
+const GWA_SCALES = [
+  { value: "", label: "Select scale" },
+  { value: "percentage", label: "Percentage (0-100)" },
+  { value: "5.0_scale", label: "5.0 Scale (1.0 highest)" },
+  { value: "4.0_scale", label: "4.0 Scale (4.0 highest)" },
+] as const;
+
+const EQUITY_FLAG_MAP: Record<string, string> = {
+  Underprivileged: "is_underprivileged",
+  PWD: "is_pwd",
+  IP: "is_indigenous_people",
+  "Solo Parent Dependent": "is_solo_parent_dependent",
+  "OFW Dependent": "is_ofw_dependent",
+  "Farmer/Fisher Dependent": "is_farmer_fisher_dependent",
+  "4Ps/Listahanan": "is_4ps_listahanan",
+};
 
 export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
+  const [step, setStep] = useState(1);
   const [values, setValues] = useState<Record<string, string>>({
     full_name: "",
     email: "",
     age: "",
+    gender: "",
     region: "",
+    province: "",
+    city_municipality: "",
+    barangay: "",
     school: "",
-    needs: "",
+    school_type: "",
+    target_school: "",
     education_level: "",
+    current_academic_stage: "",
+    target_academic_year: "",
+    field_of_study_broad: "",
+    field_of_study_specific: "",
+    gwa_raw: "",
+    gwa_scale: "",
+    needs: "",
+    extracurriculars: "",
+    awards: "",
+    household_income_annual: "",
+    income_bracket: "",
+    is_underprivileged: "",
+    is_pwd: "",
+    is_indigenous_people: "",
+    is_solo_parent_dependent: "",
+    is_ofw_dependent: "",
+    is_farmer_fisher_dependent: "",
+    is_4ps_listahanan: "",
+    parent_occupation: "",
   });
 
   const selectedNeeds = (values.needs ?? "")
@@ -64,27 +101,31 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
     setValues((prev) => ({ ...prev, needs: next.join(", ") }));
   };
 
-  const filledCount = countFilledFields(values);
-  const strengthPercent = Math.round((filledCount / REQUIRED_FIELDS.length) * 100);
-
   const handleChange = (name: string, value: string) => {
     setValues((prev) => ({ ...prev, [name]: value }));
   };
+
+  const toggleEquity = (flagName: string) => {
+    const current = values[flagName] === "on";
+    setValues((prev) => ({ ...prev, [flagName]: current ? "" : "on" }));
+  };
+
+  const strengthPercent = Math.round((step / STEPS) * 100);
 
   return (
     <section id="profile" className="py-8">
       <div className="mx-auto max-w-6xl px-4">
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-lg sm:p-8">
           <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-2xl font-semibold text-slate-900">
-              Build Your Profile
-            </h2>
-            <span className="text-sm text-slate-500">Step 1 of 2</span>
+            <h2 className="text-2xl font-semibold text-slate-900">Build Your Profile</h2>
+            <span className="text-sm text-slate-500">
+              Step {step} of {STEPS}
+            </span>
           </div>
 
           <div className="mb-6">
             <div className="flex items-center justify-between text-sm">
-              <span className="font-medium text-slate-700">Profile Strength</span>
+              <span className="font-medium text-slate-700">Progress</span>
               <span className="text-slate-500">{strengthPercent}%</span>
             </div>
             <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
@@ -95,177 +136,518 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
             </div>
           </div>
 
-          <form
-            onSubmit={onSubmit}
-            className="grid gap-6 sm:grid-cols-2 sm:gap-8"
-          >
-            <div className="space-y-4 sm:col-span-2">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                Personal Info
-              </h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label
-                    htmlFor="full_name"
-                    className="block text-sm font-medium text-slate-700"
-                  >
-                    Full name
-                  </label>
-                  <input
-                    id="full_name"
-                    name="full_name"
-                    type="text"
-                    required
-                    value={values.full_name}
-                    onChange={(e) => handleChange("full_name", e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                    placeholder="e.g. Maria Santos"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="email"
-                    className="block text-sm font-medium text-slate-700"
-                  >
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    required
-                    value={values.email}
-                    onChange={(e) => handleChange("email", e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                    placeholder="maria@example.com"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="age"
-                    className="block text-sm font-medium text-slate-700"
-                  >
-                    Age
-                  </label>
-                  <input
-                    id="age"
-                    name="age"
-                    type="number"
-                    min={13}
-                    max={120}
-                    required
-                    value={values.age}
-                    onChange={(e) => handleChange("age", e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                    placeholder="18"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4 sm:col-span-2">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                Academic Info
-              </h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label
-                    htmlFor="school"
-                    className="block text-sm font-medium text-slate-700"
-                  >
-                    School
-                  </label>
-                  <input
-                    id="school"
-                    name="school"
-                    type="text"
-                    required
-                    value={values.school}
-                    onChange={(e) => handleChange("school", e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                    placeholder="Current or target school"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="region"
-                    className="block text-sm font-medium text-slate-700"
-                  >
-                    Region
-                  </label>
-                  <input
-                    id="region"
-                    name="region"
-                    type="text"
-                    required
-                    value={values.region}
-                    onChange={(e) => handleChange("region", e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                    placeholder="e.g. NCR, Visayas, Mindanao"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="education_level"
-                    className="block text-sm font-medium text-slate-700"
-                  >
-                    Education Level
-                  </label>
-                  <select
-                    id="education_level"
-                    name="education_level"
-                    value={values.education_level}
-                    onChange={(e) =>
-                      handleChange("education_level", e.target.value)
-                    }
-                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                  >
-                    {EDUCATION_LEVELS.map((opt) => (
-                      <option key={opt.value || "empty"} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4 sm:col-span-2">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                Needs & Background
-              </h3>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">
-                  Needs / tags
-                </label>
-                <input
-                  type="hidden"
-                  name="needs"
-                  value={values.needs}
-                />
-                <div className="mt-2 space-y-3">
+          <form onSubmit={onSubmit} className="grid gap-6 sm:grid-cols-2 sm:gap-8">
+            {/* Step 1: Personal Identity */}
+            {step === 1 && (
+              <div className="space-y-4 sm:col-span-2">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                  Personal Identity & Contact
+                </h3>
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <p className="mb-2 text-xs font-medium text-slate-500">
-                      Selected
-                    </p>
-                    <SelectedChips
-                      selected={selectedNeeds}
-                      onRemove={toggleNeed}
-                      emptyMessage="Expand a category below to select needs"
+                    <label htmlFor="full_name" className="block text-sm font-medium text-slate-700">
+                      Full name
+                    </label>
+                    <input
+                      id="full_name"
+                      name="full_name"
+                      type="text"
+                      required
+                      value={values.full_name}
+                      onChange={(e) => handleChange("full_name", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      placeholder="e.g. Maria Santos"
                     />
                   </div>
-                  <NeedsCategoryAccordion
-                    categories={NEEDS_CATEGORIES}
-                    selected={selectedNeeds}
-                    onToggle={toggleNeed}
-                  />
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-slate-700">
+                      Email
+                    </label>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      required
+                      value={values.email}
+                      onChange={(e) => handleChange("email", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      placeholder="maria@example.com"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="gender" className="block text-sm font-medium text-slate-700">
+                      Gender
+                    </label>
+                    <select
+                      id="gender"
+                      name="gender"
+                      value={values.gender}
+                      onChange={(e) => handleChange("gender", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                    >
+                      <option value="">Select</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="age" className="block text-sm font-medium text-slate-700">
+                      Age
+                    </label>
+                    <input
+                      id="age"
+                      name="age"
+                      type="number"
+                      min={13}
+                      max={120}
+                      required
+                      value={values.age}
+                      onChange={(e) => handleChange("age", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      placeholder="18"
+                    />
+                  </div>
                 </div>
-                <p className="mt-3 text-xs text-slate-500">
-                  Click categories to expand and select your needs. We use these
-                  tags to match you with relevant scholarships.
-                </p>
               </div>
-            </div>
+            )}
+
+            {/* Step 2: Academic Trajectory */}
+            {step === 2 && (
+              <div className="space-y-4 sm:col-span-2">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                  Academic Trajectory
+                </h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="current_academic_stage" className="block text-sm font-medium text-slate-700">
+                      Current academic stage
+                    </label>
+                    <select
+                      id="current_academic_stage"
+                      name="current_academic_stage"
+                      value={values.current_academic_stage}
+                      onChange={(e) => handleChange("current_academic_stage", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                    >
+                      {ACADEMIC_STAGES.map((opt) => (
+                        <option key={opt.value || "empty"} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="education_level" className="block text-sm font-medium text-slate-700">
+                      Education level
+                    </label>
+                    <select
+                      id="education_level"
+                      name="education_level"
+                      value={values.education_level}
+                      onChange={(e) => handleChange("education_level", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                    >
+                      {EDUCATION_LEVELS.map((opt) => (
+                        <option key={opt.value || "empty"} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="target_academic_year" className="block text-sm font-medium text-slate-700">
+                      Target academic year
+                    </label>
+                    <input
+                      id="target_academic_year"
+                      name="target_academic_year"
+                      type="text"
+                      value={values.target_academic_year}
+                      onChange={(e) => handleChange("target_academic_year", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      placeholder="e.g. 2026-2027"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="school" className="block text-sm font-medium text-slate-700">
+                      School
+                    </label>
+                    <input
+                      id="school"
+                      name="school"
+                      type="text"
+                      required
+                      value={values.school}
+                      onChange={(e) => handleChange("school", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      placeholder="Current or target school"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="school_type" className="block text-sm font-medium text-slate-700">
+                      School type
+                    </label>
+                    <select
+                      id="school_type"
+                      name="school_type"
+                      value={values.school_type}
+                      onChange={(e) => handleChange("school_type", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                    >
+                      {SCHOOL_TYPES.map((opt) => (
+                        <option key={opt.value || "empty"} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="target_school" className="block text-sm font-medium text-slate-700">
+                      Target university (if applicable)
+                    </label>
+                    <input
+                      id="target_school"
+                      name="target_school"
+                      type="text"
+                      value={values.target_school}
+                      onChange={(e) => handleChange("target_school", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      placeholder="e.g. UP Diliman"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label htmlFor="field_of_study_broad" className="block text-sm font-medium text-slate-700">
+                      Field of study (broad)
+                    </label>
+                    <select
+                      id="field_of_study_broad"
+                      name="field_of_study_broad"
+                      value={values.field_of_study_broad}
+                      onChange={(e) => handleChange("field_of_study_broad", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                    >
+                      <option value="">Select</option>
+                      <option value="STEM">STEM</option>
+                      <option value="Engineering">Engineering</option>
+                      <option value="IT">IT</option>
+                      <option value="Medical">Medical</option>
+                      <option value="Business">Business</option>
+                      <option value="Education">Education</option>
+                      <option value="Agriculture">Agriculture</option>
+                      <option value="Arts">Arts</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Geographic */}
+            {step === 3 && (
+              <div className="space-y-4 sm:col-span-2">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                  Geographic Specificity
+                </h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="region" className="block text-sm font-medium text-slate-700">
+                      Region
+                    </label>
+                    <input
+                      id="region"
+                      name="region"
+                      type="text"
+                      required
+                      value={values.region}
+                      onChange={(e) => handleChange("region", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      placeholder="e.g. NCR, Visayas, Mindanao"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="province" className="block text-sm font-medium text-slate-700">
+                      Province
+                    </label>
+                    <input
+                      id="province"
+                      name="province"
+                      type="text"
+                      value={values.province}
+                      onChange={(e) => handleChange("province", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      placeholder="e.g. Metro Manila"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="city_municipality" className="block text-sm font-medium text-slate-700">
+                      City / Municipality
+                    </label>
+                    <input
+                      id="city_municipality"
+                      name="city_municipality"
+                      type="text"
+                      value={values.city_municipality}
+                      onChange={(e) => handleChange("city_municipality", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      placeholder="e.g. Quezon City"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="barangay" className="block text-sm font-medium text-slate-700">
+                      Barangay
+                    </label>
+                    <input
+                      id="barangay"
+                      name="barangay"
+                      type="text"
+                      value={values.barangay}
+                      onChange={(e) => handleChange("barangay", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      placeholder="Optional"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Academic Merit */}
+            {step === 4 && (
+              <div className="space-y-4 sm:col-span-2">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                  Academic Merit & Interests
+                </h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="field_of_study_specific" className="block text-sm font-medium text-slate-700">
+                      Specific course / major
+                    </label>
+                    <input
+                      id="field_of_study_specific"
+                      name="field_of_study_specific"
+                      type="text"
+                      value={values.field_of_study_specific}
+                      onChange={(e) => handleChange("field_of_study_specific", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      placeholder="e.g. BS Computer Science"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="gwa_raw" className="block text-sm font-medium text-slate-700">
+                      GWA / Grade
+                    </label>
+                    <input
+                      id="gwa_raw"
+                      name="gwa_raw"
+                      type="text"
+                      value={values.gwa_raw}
+                      onChange={(e) => handleChange("gwa_raw", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      placeholder="e.g. 95 or 1.25"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="gwa_scale" className="block text-sm font-medium text-slate-700">
+                      Grading scale
+                    </label>
+                    <select
+                      id="gwa_scale"
+                      name="gwa_scale"
+                      value={values.gwa_scale}
+                      onChange={(e) => handleChange("gwa_scale", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                    >
+                      {GWA_SCALES.map((opt) => (
+                        <option key={opt.value || "empty"} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label htmlFor="extracurriculars" className="block text-sm font-medium text-slate-700">
+                      Extracurriculars (comma-separated)
+                    </label>
+                    <input
+                      id="extracurriculars"
+                      name="extracurriculars"
+                      type="text"
+                      value={values.extracurriculars}
+                      onChange={(e) => handleChange("extracurriculars", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      placeholder="e.g. Student Council, Science Club"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label htmlFor="awards" className="block text-sm font-medium text-slate-700">
+                      Awards (comma-separated)
+                    </label>
+                    <input
+                      id="awards"
+                      name="awards"
+                      type="text"
+                      value={values.awards}
+                      onChange={(e) => handleChange("awards", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      placeholder="e.g. National Honor Society"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-slate-700">Needs / tags</label>
+                    <input type="hidden" name="needs" value={values.needs} />
+                    <div className="mt-2 space-y-3">
+                      <SelectedChips
+                        selected={selectedNeeds}
+                        onRemove={toggleNeed}
+                        emptyMessage="Expand a category below to select needs"
+                      />
+                      <NeedsCategoryAccordion
+                        categories={NEEDS_CATEGORIES}
+                        selected={selectedNeeds}
+                        onToggle={toggleNeed}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 5: Socio-Economic */}
+            {step === 5 && (
+              <div className="space-y-4 sm:col-span-2">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                  Socio-Economic & Priority Groups
+                </h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="household_income_annual" className="block text-sm font-medium text-slate-700">
+                      Household income (PHP/year)
+                    </label>
+                    <input
+                      id="household_income_annual"
+                      name="household_income_annual"
+                      type="number"
+                      min={0}
+                      value={values.household_income_annual}
+                      onChange={(e) => handleChange("household_income_annual", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      placeholder="e.g. 180000"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="income_bracket" className="block text-sm font-medium text-slate-700">
+                      Income bracket (if unsure)
+                    </label>
+                    <select
+                      id="income_bracket"
+                      name="income_bracket"
+                      value={values.income_bracket}
+                      onChange={(e) => handleChange("income_bracket", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                    >
+                      <option value="">Select</option>
+                      {INCOME_BRACKETS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Priority groups (RA-based)
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {EQUITY_GROUPS[0].tags.map((tag) => {
+                        const flagName = EQUITY_FLAG_MAP[tag.id] || tag.id;
+                        const isChecked = values[flagName] === "on";
+                        return (
+                          <label
+                            key={tag.id}
+                            className="flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1.5 text-sm cursor-pointer hover:bg-slate-50"
+                          >
+                            <input
+                              type="checkbox"
+                              name={flagName}
+                              checked={isChecked}
+                              onChange={() => toggleEquity(flagName)}
+                              className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                            />
+                            <span>{tag.label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-2 text-xs text-slate-500">
+                      Select if you belong to any priority group for scholarship matching.
+                    </p>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label htmlFor="parent_occupation" className="block text-sm font-medium text-slate-700">
+                      Parent occupation (optional)
+                    </label>
+                    <input
+                      id="parent_occupation"
+                      name="parent_occupation"
+                      type="text"
+                      value={values.parent_occupation}
+                      onChange={(e) => handleChange("parent_occupation", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      placeholder="e.g. GSIS member, OFW"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Hidden fields for steps not shown */}
+            {step !== 1 && (
+              <>
+                <input type="hidden" name="full_name" value={values.full_name} />
+                <input type="hidden" name="email" value={values.email} />
+                <input type="hidden" name="age" value={values.age} />
+                <input type="hidden" name="gender" value={values.gender} />
+              </>
+            )}
+            {step !== 2 && (
+              <>
+                <input type="hidden" name="school" value={values.school} />
+                <input type="hidden" name="education_level" value={values.education_level} />
+                <input type="hidden" name="current_academic_stage" value={values.current_academic_stage} />
+                <input type="hidden" name="target_academic_year" value={values.target_academic_year} />
+                <input type="hidden" name="school_type" value={values.school_type} />
+                <input type="hidden" name="target_school" value={values.target_school} />
+                <input type="hidden" name="field_of_study_broad" value={values.field_of_study_broad} />
+              </>
+            )}
+            {step !== 3 && (
+              <>
+                <input type="hidden" name="region" value={values.region} />
+                <input type="hidden" name="province" value={values.province} />
+                <input type="hidden" name="city_municipality" value={values.city_municipality} />
+                <input type="hidden" name="barangay" value={values.barangay} />
+              </>
+            )}
+            {step !== 4 && (
+              <>
+                <input type="hidden" name="field_of_study_specific" value={values.field_of_study_specific} />
+                <input type="hidden" name="gwa_raw" value={values.gwa_raw} />
+                <input type="hidden" name="gwa_scale" value={values.gwa_scale} />
+                <input type="hidden" name="needs" value={values.needs} />
+                <input type="hidden" name="extracurriculars" value={values.extracurriculars} />
+                <input type="hidden" name="awards" value={values.awards} />
+              </>
+            )}
+            {step !== 5 && (
+              <>
+                <input type="hidden" name="household_income_annual" value={values.household_income_annual} />
+                <input type="hidden" name="income_bracket" value={values.income_bracket} />
+                <input type="hidden" name="parent_occupation" value={values.parent_occupation} />
+              </>
+            )}
+            {EQUITY_GROUPS[0].tags.map((tag) => {
+              const flagName = EQUITY_FLAG_MAP[tag.id] || tag.id;
+              return <input key={flagName} type="hidden" name={flagName} value={values[flagName] || ""} />;
+            })}
 
             {error && (
               <div className="sm:col-span-2">
@@ -279,27 +661,46 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
             )}
 
             <div className="sm:col-span-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-slate-500">
-                We only store minimal data needed for matching.
-              </p>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white shadow-md transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-                aria-label={loading ? "Matching scholarships" : "Get My Matches"}
-              >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <span
-                      className="h-4 w-4 animate-spin rounded-full border-2 border-primary-100 border-t-transparent"
-                      aria-hidden
-                    />
-                    Matching...
-                  </span>
-                ) : (
-                  "Get My Matches"
+              <div className="flex gap-2">
+                {step > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setStep((s) => s - 1)}
+                    className="rounded-xl border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                  >
+                    Back
+                  </button>
                 )}
-              </button>
+                {step < STEPS && (
+                  <button
+                    type="button"
+                    onClick={() => setStep((s) => s + 1)}
+                    className="rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white shadow-md transition hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                  >
+                    Next
+                  </button>
+                )}
+              </div>
+              {step === STEPS && (
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white shadow-md transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                  aria-label={loading ? "Matching scholarships" : "Get My Matches"}
+                >
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span
+                        className="h-4 w-4 animate-spin rounded-full border-2 border-primary-100 border-t-transparent"
+                        aria-hidden
+                      />
+                      Matching...
+                    </span>
+                  ) : (
+                    "Get My Matches"
+                  )}
+                </button>
+              )}
             </div>
           </form>
         </div>
