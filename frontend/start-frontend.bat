@@ -1,6 +1,6 @@
 @echo off
 echo ========================================
-echo Starting ISKOLAR Frontend
+echo Starting ISKONNECT Frontend
 echo ========================================
 echo.
 

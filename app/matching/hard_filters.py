@@ -77,18 +77,16 @@ def _region_matches(
             if ec and profile_city_lower and profile_city_lower in ec.strip().lower():
                 return True
 
-    # Region-level match
+    # Region-level match: use exact equality after normalization to avoid false positives
+    # (e.g. "Region VI" must not substring-match "Region VII")
     for r in regions:
         if not r:
             continue
         r_norm = normalize_region(r)
-        if profile_region_norm and (
-            profile_region_norm in r_norm or r_norm in profile_region_norm or profile_region_norm == r_norm
-        ):
+        if profile_region_norm and profile_region_norm == r_norm:
             return True
-        if profile_region and r and (
-            profile_region.lower() in r.lower() or r.lower() in (profile_region or "").lower()
-        ):
+        # Direct match when both normalize to same island group (e.g. NCR and Metro Manila)
+        if profile_region and r and profile_region.strip().lower() == r.strip().lower():
             return True
 
     return False
@@ -149,18 +147,43 @@ def _gwa_matches(profile_gwa: float | None, min_gwa_required: float | None) -> b
     return profile_gwa >= min_gwa_required
 
 
-def _field_matches(profile_field_broad: str | None, eligible_courses_psced: list) -> bool:
-    """Check if profile field of study matches scholarship course eligibility."""
-    if not eligible_courses_psced:
+def _field_matches(
+    profile_field_broad: str | None,
+    profile_preferred_courses: list,
+    eligible_courses_psced: list,
+    eligible_courses_specific: list,
+) -> bool:
+    """Check if profile field of study matches scholarship course eligibility.
+    Uses FIELD_HIERARCHY so e.g. Engineering matches STEM-eligible scholarships.
+    Also checks preferred_courses against eligible_courses_specific."""
+    if not eligible_courses_psced and not eligible_courses_specific:
         return True
-    if not profile_field_broad or not profile_field_broad.strip():
+    has_profile_data = (profile_field_broad and profile_field_broad.strip()) or (profile_preferred_courses and any(p for p in profile_preferred_courses if p))
+    if not has_profile_data:
         return True
+    from app.taxonomy.psced_fields import FIELD_HIERARCHY
+
     profile_f = profile_field_broad.strip().lower()
+    profile_fields_to_check = [profile_f]
+    parents = FIELD_HIERARCHY.get(profile_field_broad.strip())
+    if parents:
+        profile_fields_to_check.extend(p.strip().lower() for p in parents)
+
     for ec in eligible_courses_psced:
-        if ec and ec.strip().lower() in profile_f:
-            return True
-        if ec and profile_f in ec.strip().lower():
-            return True
+        if not ec:
+            continue
+        ec_lower = ec.strip().lower()
+        for pf in profile_fields_to_check:
+            if ec_lower in pf or pf in ec_lower:
+                return True
+
+    for pc in (profile_preferred_courses or []):
+        if not pc:
+            continue
+        pc_lower = str(pc).strip().lower()
+        for ec in (eligible_courses_specific or []):
+            if ec and (pc_lower in str(ec).lower() or str(ec).lower() in pc_lower):
+                return True
     return False
 
 
@@ -210,7 +233,9 @@ def filter_scholarships(profile: dict, scholarships: list) -> list:
             continue
         if not _field_matches(
             profile.get("field_of_study_broad"),
+            _parse_json_list(profile.get("preferred_courses")),
             _parse_json_list(sch.get("eligible_courses_psced")),
+            _parse_json_list(sch.get("eligible_courses_specific")),
         ):
             continue
         result.append(sch)

@@ -8,10 +8,10 @@ export function HeroSection({ onCtaClick }: HeroSectionProps) {
       <div className="mx-auto max-w-6xl px-4">
         <div className="grid gap-12 md:grid-cols-2 md:gap-16">
           <div className="flex flex-col justify-center">
-            <h2 className="text-4xl font-bold text-slate-900">
+            <h2 className="text-4xl font-bold text-slate-900 dark:text-slate-100">
               Find the Right Scholarship for You.
             </h2>
-            <p className="mt-4 text-lg text-slate-600">
+            <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">
               Answer a few questions and discover scholarships you qualify for.
             </p>
             <button
@@ -24,41 +24,20 @@ export function HeroSection({ onCtaClick }: HeroSectionProps) {
             </button>
           </div>
           <div className="flex items-center justify-center">
-            <div className="h-64 w-full max-w-sm rounded-2xl border border-slate-200 bg-primary-50 shadow-lg sm:h-80">
+            <div className="h-64 w-full max-w-sm rounded-2xl border border-slate-200 dark:border-slate-700 bg-primary-50 dark:bg-primary-900/30 shadow-lg sm:h-80">
               <div className="flex h-full items-center justify-center p-8">
                 <svg
-                  viewBox="0 0 160 140"
-                  className="h-full w-full text-primary-600"
-                  aria-hidden
+                  className="h-full w-full max-h-48 text-primary-600 dark:text-primary-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                  aria-hidden="true"
                 >
                   <path
-                    d="M80 15 L25 42 L80 70 L135 42 Z"
-                    fill="currentColor"
-                    opacity="0.9"
-                  />
-                  <path
-                    d="M70 70 L80 75 L90 70 L80 65 Z"
-                    fill="currentColor"
-                  />
-                  <line
-                    x1="80"
-                    y1="75"
-                    x2="80"
-                    y2="115"
-                    stroke="currentColor"
-                    strokeWidth="5"
                     strokeLinecap="round"
-                  />
-                  <circle cx="80" cy="120" r="10" fill="currentColor" opacity="0.7" />
-                  <ellipse
-                    cx="80"
-                    cy="95"
-                    rx="55"
-                    ry="12"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    opacity="0.5"
+                    strokeLinejoin="round"
+                    d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5"
                   />
                 </svg>
               </div>

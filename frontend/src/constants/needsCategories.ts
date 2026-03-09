@@ -49,6 +49,6 @@ export const NEEDS_CATEGORIES = [
   },
   {
     label: "Personal Background",
-    tags: ["Underprivileged", "First-gen", "OFW Dependent", "GSIS Dependent", "Athletics", "Leadership"],
+    tags: ["First-gen", "GSIS Dependent", "Athletics", "Leadership"],
   },
 ] as const;

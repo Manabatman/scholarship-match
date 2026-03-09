@@ -181,7 +181,8 @@ def test_engine_high_score_strong_match():
         document_readiness_ratio=1.0,
     )
     result = WeightedDeterministicScorer().score(payload)
-    assert result.final_score >= 75
+    # After M4: readiness removed from scoring; threshold adjusted
+    assert result.final_score >= 70
 
 
 def test_engine_low_score_weak_match():
@@ -258,7 +259,7 @@ def test_assess_confidence_low():
 
 def test_config_custom_weights():
     config = ScoringConfig()
-    config.weights = {"academic": 0.5, "income": 0.5, "field_alignment": 0, "geographic": 0, "equity_priority": 0, "readiness": 0}
+    config.weights = {"academic": 0.5, "income": 0.5, "field_alignment": 0, "geographic": 0, "equity_priority": 0}
     scorer = WeightedDeterministicScorer(config=config)
     payload = _make_payload()
     result = scorer.score(payload)
@@ -267,7 +268,7 @@ def test_config_custom_weights():
 
 def test_breakdown_has_required_keys():
     result = WeightedDeterministicScorer().score(_make_payload())
-    for key in ("academic", "socioeconomic", "field_relevance", "geographic", "document_readiness", "priority_group"):
+    for key in ("academic", "socioeconomic", "field_relevance", "geographic", "priority_group"):
         assert key in result.breakdown
         assert "status" in result.breakdown[key]
         assert "user_value" in result.breakdown[key]

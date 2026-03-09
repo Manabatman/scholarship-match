@@ -2,6 +2,7 @@ import { FormEvent, useState } from "react";
 import { NeedsCategoryAccordion } from "./NeedsCategoryAccordion";
 import { SelectedChips } from "./SelectedChips";
 import { NEEDS_CATEGORIES, EQUITY_GROUPS, INCOME_BRACKETS } from "../constants/needsCategories";
+import { PHILIPPINE_REGIONS } from "../constants/regions";
 
 interface ProfileFormProps {
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -53,8 +54,25 @@ const EQUITY_FLAG_MAP: Record<string, string> = {
   "4Ps/Listahanan": "is_4ps_listahanan",
 };
 
+const TIER1_FIELDS: { key: string; step: number; label: string }[] = [
+  { key: "full_name", step: 1, label: "Full name" },
+  { key: "email", step: 1, label: "Email" },
+  { key: "age", step: 1, label: "Age" },
+  { key: "education_level", step: 2, label: "Education level" },
+  { key: "region", step: 3, label: "Region" },
+];
+
+const TIER2_FIELDS: { key: string; label: string }[] = [
+  { key: "field_of_study_broad", label: "Field of study" },
+  { key: "school_type", label: "School type" },
+  { key: "household_income_annual", label: "Household income or income bracket" },
+];
+
 export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
   const [step, setStep] = useState(1);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [showRecommendedDialog, setShowRecommendedDialog] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState<FormEvent<HTMLFormElement> | null>(null);
   const [values, setValues] = useState<Record<string, string>>({
     full_name: "",
     email: "",
@@ -72,6 +90,9 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
     target_academic_year: "",
     field_of_study_broad: "",
     field_of_study_specific: "",
+    preferred_course_1: "",
+    preferred_course_2: "",
+    preferred_course_3: "",
     gwa_raw: "",
     gwa_scale: "",
     needs: "",
@@ -110,25 +131,74 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
     setValues((prev) => ({ ...prev, [flagName]: current ? "" : "on" }));
   };
 
+  const getVal = (k: string) => (values[k] ?? "").trim();
+  const hasIncome = () => {
+    const income = getVal("household_income_annual");
+    const bracket = getVal("income_bracket");
+    return !!income || !!bracket;
+  };
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setValidationErrors({});
+
+    const tier1Missing = TIER1_FIELDS.filter((f) => !getVal(f.key));
+    if (tier1Missing.length > 0) {
+      const errs: Record<string, string> = {};
+      tier1Missing.forEach((f) => {
+        errs[f.key] = `${f.label} is required`;
+      });
+      setValidationErrors(errs);
+      const firstStep = Math.min(...tier1Missing.map((f) => f.step));
+      setStep(firstStep);
+      return;
+    }
+
+    const tier2Missing = TIER2_FIELDS.filter((f) => {
+      if (f.key === "household_income_annual") return !hasIncome();
+      return !getVal(f.key);
+    });
+    if (tier2Missing.length > 0) {
+      setShowRecommendedDialog(true);
+      setPendingSubmit(e);
+      return;
+    }
+
+    onSubmit(e);
+  };
+
+  const confirmSubmitAnyway = () => {
+    setShowRecommendedDialog(false);
+    if (pendingSubmit) {
+      onSubmit(pendingSubmit);
+      setPendingSubmit(null);
+    }
+  };
+
+  const cancelRecommendedDialog = () => {
+    setShowRecommendedDialog(false);
+    setPendingSubmit(null);
+  };
+
   const strengthPercent = Math.round((step / STEPS) * 100);
 
   return (
     <section id="profile" className="py-8">
       <div className="mx-auto max-w-6xl px-4">
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-lg sm:p-8">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-lg sm:p-8 dark:border-slate-700 dark:bg-slate-800">
           <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-2xl font-semibold text-slate-900">Build Your Profile</h2>
-            <span className="text-sm text-slate-500">
+            <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Build Your Profile</h2>
+            <span className="text-sm text-slate-500 dark:text-slate-400">
               Step {step} of {STEPS}
             </span>
           </div>
 
           <div className="mb-6">
             <div className="flex items-center justify-between text-sm">
-              <span className="font-medium text-slate-700">Progress</span>
-              <span className="text-slate-500">{strengthPercent}%</span>
+              <span className="font-medium text-slate-700 dark:text-slate-300">Progress</span>
+              <span className="text-slate-500 dark:text-slate-400">{strengthPercent}%</span>
             </div>
-            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
               <div
                 className="h-full rounded-full bg-primary-600 transition-all duration-300"
                 style={{ width: `${strengthPercent}%` }}
@@ -136,16 +206,53 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
             </div>
           </div>
 
-          <form onSubmit={onSubmit} className="grid gap-6 sm:grid-cols-2 sm:gap-8">
+          {showRecommendedDialog && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+              role="dialog"
+              aria-labelledby="recommended-dialog-title"
+              aria-modal="true"
+            >
+              <div className="max-w-md rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-xl">
+                <h3 id="recommended-dialog-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                  Some important fields are empty
+                </h3>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                  Your matches may be less accurate. Missing: field of study, school type, or income information.
+                </p>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                  You can still continue — we will show you the best matches we can with the information provided.
+                </p>
+                <div className="mt-6 flex gap-3 justify-end">
+                  <button
+                    type="button"
+                    onClick={cancelRecommendedDialog}
+                    className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600"
+                  >
+                    Go back and fill in
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmSubmitAnyway}
+                    className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
+                  >
+                    Continue anyway
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="grid gap-6 sm:grid-cols-2 sm:gap-8">
             {/* Step 1: Personal Identity */}
             {step === 1 && (
               <div className="space-y-4 sm:col-span-2">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Personal Identity & Contact
                 </h3>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label htmlFor="full_name" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="full_name" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                       Full name
                     </label>
                     <input
@@ -155,12 +262,15 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                       required
                       value={values.full_name}
                       onChange={(e) => handleChange("full_name", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      className={`mt-1 w-full rounded-lg border bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:ring-2 focus:ring-primary-200 ${validationErrors.full_name ? "border-red-500" : "border-slate-300 dark:border-slate-600 focus:border-primary-500"}`}
                       placeholder="e.g. Maria Santos"
                     />
+                    {validationErrors.full_name && (
+                      <p className="mt-1 text-xs text-red-600">{validationErrors.full_name}</p>
+                    )}
                   </div>
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                       Email
                     </label>
                     <input
@@ -170,12 +280,15 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                       required
                       value={values.email}
                       onChange={(e) => handleChange("email", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      className={`mt-1 w-full rounded-lg border bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:ring-2 focus:ring-primary-200 ${validationErrors.email ? "border-red-500" : "border-slate-300 dark:border-slate-600 focus:border-primary-500"}`}
                       placeholder="maria@example.com"
                     />
+                    {validationErrors.email && (
+                      <p className="mt-1 text-xs text-red-600">{validationErrors.email}</p>
+                    )}
                   </div>
                   <div>
-                    <label htmlFor="gender" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="gender" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                       Gender
                     </label>
                     <select
@@ -183,7 +296,7 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                       name="gender"
                       value={values.gender}
                       onChange={(e) => handleChange("gender", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                     >
                       <option value="">Select</option>
                       <option value="Male">Male</option>
@@ -192,7 +305,7 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="age" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="age" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                       Age
                     </label>
                     <input
@@ -204,9 +317,12 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                       required
                       value={values.age}
                       onChange={(e) => handleChange("age", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      className={`mt-1 w-full rounded-lg border bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:ring-2 focus:ring-primary-200 ${validationErrors.age ? "border-red-500" : "border-slate-300 dark:border-slate-600 focus:border-primary-500"}`}
                       placeholder="18"
                     />
+                    {validationErrors.age && (
+                      <p className="mt-1 text-xs text-red-600">{validationErrors.age}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -215,12 +331,12 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
             {/* Step 2: Academic Trajectory */}
             {step === 2 && (
               <div className="space-y-4 sm:col-span-2">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Academic Trajectory
                 </h3>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label htmlFor="current_academic_stage" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="current_academic_stage" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                       Current academic stage
                     </label>
                     <select
@@ -228,7 +344,7 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                       name="current_academic_stage"
                       value={values.current_academic_stage}
                       onChange={(e) => handleChange("current_academic_stage", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                     >
                       {ACADEMIC_STAGES.map((opt) => (
                         <option key={opt.value || "empty"} value={opt.value}>
@@ -238,7 +354,7 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="education_level" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="education_level" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                       Education level
                     </label>
                     <select
@@ -246,7 +362,7 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                       name="education_level"
                       value={values.education_level}
                       onChange={(e) => handleChange("education_level", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      className={`mt-1 w-full rounded-lg border bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:ring-2 focus:ring-primary-200 ${validationErrors.education_level ? "border-red-500" : "border-slate-300 dark:border-slate-600 focus:border-primary-500"}`}
                     >
                       {EDUCATION_LEVELS.map((opt) => (
                         <option key={opt.value || "empty"} value={opt.value}>
@@ -254,9 +370,12 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                         </option>
                       ))}
                     </select>
+                    {validationErrors.education_level && (
+                      <p className="mt-1 text-xs text-red-600">{validationErrors.education_level}</p>
+                    )}
                   </div>
                   <div>
-                    <label htmlFor="target_academic_year" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="target_academic_year" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                       Target academic year
                     </label>
                     <input
@@ -265,12 +384,12 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                       type="text"
                       value={values.target_academic_year}
                       onChange={(e) => handleChange("target_academic_year", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                       placeholder="e.g. 2026-2027"
                     />
                   </div>
                   <div>
-                    <label htmlFor="school" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="school" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                       School
                     </label>
                     <input
@@ -280,20 +399,23 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                       required
                       value={values.school}
                       onChange={(e) => handleChange("school", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                       placeholder="Current or target school"
                     />
                   </div>
                   <div>
-                    <label htmlFor="school_type" className="block text-sm font-medium text-slate-700">
-                      School type
+                    <label htmlFor="school_type" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                      What type of school do you currently attend?
                     </label>
+                    <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                      Select whether your current school is public or private. Some scholarships are only available to students from public schools.
+                    </p>
                     <select
                       id="school_type"
                       name="school_type"
                       value={values.school_type}
                       onChange={(e) => handleChange("school_type", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                     >
                       {SCHOOL_TYPES.map((opt) => (
                         <option key={opt.value || "empty"} value={opt.value}>
@@ -303,7 +425,7 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="target_school" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="target_school" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                       Target university (if applicable)
                     </label>
                     <input
@@ -312,12 +434,12 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                       type="text"
                       value={values.target_school}
                       onChange={(e) => handleChange("target_school", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                       placeholder="e.g. UP Diliman"
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label htmlFor="field_of_study_broad" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="field_of_study_broad" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                       Field of study (broad)
                     </label>
                     <select
@@ -325,17 +447,23 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                       name="field_of_study_broad"
                       value={values.field_of_study_broad}
                       onChange={(e) => handleChange("field_of_study_broad", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                     >
                       <option value="">Select</option>
-                      <option value="STEM">STEM</option>
-                      <option value="Engineering">Engineering</option>
-                      <option value="IT">IT</option>
-                      <option value="Medical">Medical</option>
-                      <option value="Business">Business</option>
-                      <option value="Education">Education</option>
-                      <option value="Agriculture">Agriculture</option>
-                      <option value="Arts">Arts</option>
+                      <optgroup label="STEM (Science, Technology, Engineering, Math)">
+                        <option value="STEM">STEM</option>
+                        <option value="Engineering">Engineering</option>
+                        <option value="IT">IT / Computer Science</option>
+                        <option value="Science">Natural Sciences</option>
+                        <option value="Mathematics">Mathematics / Statistics</option>
+                      </optgroup>
+                      <optgroup label="Other fields">
+                        <option value="Medical">Medical / Health Sciences</option>
+                        <option value="Business">Business / Accountancy</option>
+                        <option value="Education">Education</option>
+                        <option value="Agriculture">Agriculture / Forestry</option>
+                        <option value="Arts">Arts / Humanities</option>
+                      </optgroup>
                     </select>
                   </div>
                 </div>
@@ -345,27 +473,35 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
             {/* Step 3: Geographic */}
             {step === 3 && (
               <div className="space-y-4 sm:col-span-2">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Geographic Specificity
                 </h3>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label htmlFor="region" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="region" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                       Region
                     </label>
-                    <input
+                    <select
                       id="region"
                       name="region"
-                      type="text"
                       required
                       value={values.region}
                       onChange={(e) => handleChange("region", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                      placeholder="e.g. NCR, Visayas, Mindanao"
-                    />
+                      className={`mt-1 w-full rounded-lg border bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:ring-2 focus:ring-primary-200 ${validationErrors.region ? "border-red-500" : "border-slate-300 dark:border-slate-600 focus:border-primary-500"}`}
+                    >
+                      <option value="">Select your region</option>
+                      {PHILIPPINE_REGIONS.map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                    {validationErrors.region && (
+                      <p className="mt-1 text-xs text-red-600">{validationErrors.region}</p>
+                    )}
                   </div>
                   <div>
-                    <label htmlFor="province" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="province" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                       Province
                     </label>
                     <input
@@ -374,12 +510,12 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                       type="text"
                       value={values.province}
                       onChange={(e) => handleChange("province", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                       placeholder="e.g. Metro Manila"
                     />
                   </div>
                   <div>
-                    <label htmlFor="city_municipality" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="city_municipality" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                       City / Municipality
                     </label>
                     <input
@@ -388,12 +524,12 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                       type="text"
                       value={values.city_municipality}
                       onChange={(e) => handleChange("city_municipality", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                       placeholder="e.g. Quezon City"
                     />
                   </div>
                   <div>
-                    <label htmlFor="barangay" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="barangay" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                       Barangay
                     </label>
                     <input
@@ -402,7 +538,7 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                       type="text"
                       value={values.barangay}
                       onChange={(e) => handleChange("barangay", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                       placeholder="Optional"
                     />
                   </div>
@@ -413,26 +549,34 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
             {/* Step 4: Academic Merit */}
             {step === 4 && (
               <div className="space-y-4 sm:col-span-2">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Academic Merit & Interests
                 </h3>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="field_of_study_specific" className="block text-sm font-medium text-slate-700">
-                      Specific course / major
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Preferred courses (up to 3)
                     </label>
-                    <input
-                      id="field_of_study_specific"
-                      name="field_of_study_specific"
-                      type="text"
-                      value={values.field_of_study_specific}
-                      onChange={(e) => handleChange("field_of_study_specific", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                      placeholder="e.g. BS Computer Science"
-                    />
+                    <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                      List the courses you want to pursue. We will match scholarships that support any of them.
+                    </p>
+                    <div className="mt-2 space-y-2">
+                      {[1, 2, 3].map((i) => (
+                        <input
+                          key={i}
+                          id={`preferred_course_${i}`}
+                          name={`preferred_course_${i}`}
+                          type="text"
+                          value={values[`preferred_course_${i}` as keyof typeof values] ?? ""}
+                          onChange={(e) => handleChange(`preferred_course_${i}`, e.target.value)}
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                          placeholder={i === 1 ? "e.g. BS Computer Science" : `Course ${i} (optional)`}
+                        />
+                      ))}
+                    </div>
                   </div>
                   <div>
-                    <label htmlFor="gwa_raw" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="gwa_raw" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                       GWA / Grade
                     </label>
                     <input
@@ -441,12 +585,12 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                       type="text"
                       value={values.gwa_raw}
                       onChange={(e) => handleChange("gwa_raw", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                       placeholder="e.g. 95 or 1.25"
                     />
                   </div>
                   <div>
-                    <label htmlFor="gwa_scale" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="gwa_scale" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                       Grading scale
                     </label>
                     <select
@@ -454,7 +598,7 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                       name="gwa_scale"
                       value={values.gwa_scale}
                       onChange={(e) => handleChange("gwa_scale", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                     >
                       {GWA_SCALES.map((opt) => (
                         <option key={opt.value || "empty"} value={opt.value}>
@@ -464,7 +608,7 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                     </select>
                   </div>
                   <div className="sm:col-span-2">
-                    <label htmlFor="extracurriculars" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="extracurriculars" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                       Extracurriculars (comma-separated)
                     </label>
                     <input
@@ -473,12 +617,12 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                       type="text"
                       value={values.extracurriculars}
                       onChange={(e) => handleChange("extracurriculars", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                       placeholder="e.g. Student Council, Science Club"
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label htmlFor="awards" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="awards" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                       Awards (comma-separated)
                     </label>
                     <input
@@ -487,12 +631,12 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                       type="text"
                       value={values.awards}
                       onChange={(e) => handleChange("awards", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                       placeholder="e.g. National Honor Society"
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-slate-700">Needs / tags</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Needs / tags</label>
                     <input type="hidden" name="needs" value={values.needs} />
                     <div className="mt-2 space-y-3">
                       <SelectedChips
@@ -514,12 +658,12 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
             {/* Step 5: Socio-Economic */}
             {step === 5 && (
               <div className="space-y-4 sm:col-span-2">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Socio-Economic & Priority Groups
                 </h3>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label htmlFor="household_income_annual" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="household_income_annual" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                       Household income (PHP/year)
                     </label>
                     <input
@@ -529,12 +673,12 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                       min={0}
                       value={values.household_income_annual}
                       onChange={(e) => handleChange("household_income_annual", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                       placeholder="e.g. 180000"
                     />
                   </div>
                   <div>
-                    <label htmlFor="income_bracket" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="income_bracket" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                       Income bracket (if unsure)
                     </label>
                     <select
@@ -542,7 +686,7 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                       name="income_bracket"
                       value={values.income_bracket}
                       onChange={(e) => handleChange("income_bracket", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                     >
                       <option value="">Select</option>
                       {INCOME_BRACKETS.map((opt) => (
@@ -563,7 +707,7 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                         return (
                           <label
                             key={tag.id}
-                            className="flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1.5 text-sm cursor-pointer hover:bg-slate-50"
+                            className="flex items-center gap-2 rounded-full border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700"
                           >
                             <input
                               type="checkbox"
@@ -577,12 +721,12 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                         );
                       })}
                     </div>
-                    <p className="mt-2 text-xs text-slate-500">
+                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                       Select if you belong to any priority group for scholarship matching.
                     </p>
                   </div>
                   <div className="sm:col-span-2">
-                    <label htmlFor="parent_occupation" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="parent_occupation" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                       Parent occupation (optional)
                     </label>
                     <input
@@ -591,7 +735,7 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                       type="text"
                       value={values.parent_occupation}
                       onChange={(e) => handleChange("parent_occupation", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                       placeholder="e.g. GSIS member, OFW"
                     />
                   </div>
@@ -630,6 +774,9 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
             {step !== 4 && (
               <>
                 <input type="hidden" name="field_of_study_specific" value={values.field_of_study_specific} />
+                <input type="hidden" name="preferred_course_1" value={values.preferred_course_1} />
+                <input type="hidden" name="preferred_course_2" value={values.preferred_course_2} />
+                <input type="hidden" name="preferred_course_3" value={values.preferred_course_3} />
                 <input type="hidden" name="gwa_raw" value={values.gwa_raw} />
                 <input type="hidden" name="gwa_scale" value={values.gwa_scale} />
                 <input type="hidden" name="needs" value={values.needs} />
@@ -666,7 +813,7 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
                   <button
                     type="button"
                     onClick={() => setStep((s) => s - 1)}
-                    className="rounded-xl border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                    className="rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-6 py-3 font-semibold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
                   >
                     Back
                   </button>

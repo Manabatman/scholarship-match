@@ -31,18 +31,18 @@ export function NeedsCategoryAccordion({
       {categories.map(({ label, tags }) => (
         <div
           key={label}
-          className="rounded-lg border border-slate-200 bg-slate-50/50"
+          className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50"
         >
           <button
             type="button"
             onClick={() => toggleSection(label)}
-            className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-inset"
+            className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-slate-800 dark:text-slate-200 transition hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-inset"
             aria-expanded={expanded[label] ?? false}
             aria-controls={`needs-section-${label.replace(/\s/g, "-")}`}
           >
             {label}
             <svg
-              className={`h-5 w-5 shrink-0 text-slate-500 transition-transform ${
+              className={`h-5 w-5 shrink-0 text-slate-500 dark:text-slate-400 transition-transform ${
                 expanded[label] ? "rotate-180" : ""
               }`}
               fill="none"
@@ -64,7 +64,7 @@ export function NeedsCategoryAccordion({
               expanded[label] ? "max-h-96" : "max-h-0"
             }`}
           >
-            <div className="flex flex-wrap gap-2 border-t border-slate-200 p-4">
+            <div className="flex flex-wrap gap-2 border-t border-slate-200 dark:border-slate-700 p-4">
               {tags.map((tag) => {
                 const isSelected = selected.includes(tag);
                 return (
@@ -75,7 +75,7 @@ export function NeedsCategoryAccordion({
                     className={`rounded-full px-3 py-1.5 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
                       isSelected
                         ? "bg-primary-600 text-white"
-                        : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                        : "bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-500"
                     }`}
                   >
                     {tag}

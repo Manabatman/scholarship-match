@@ -3,6 +3,14 @@ PSCED-aligned field-of-study taxonomy.
 Philippine Standard Classification of Education (PSCED) broad disciplines and sample courses.
 """
 
+# Field hierarchy: child -> parent(s). Used for matching (e.g. Engineering is subset of STEM).
+FIELD_HIERARCHY = {
+    "Engineering": ["STEM"],
+    "IT": ["STEM"],
+    "Science": ["STEM"],
+    "Mathematics": ["STEM"],
+}
+
 # Broad disciplines (PSCED-aligned) - used for eligibility matching
 PSCED_BROAD_DISCIPLINES = {
     "STEM": "Science, Technology, Engineering, Mathematics",

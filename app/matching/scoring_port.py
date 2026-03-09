@@ -35,6 +35,12 @@ class ScoringPayload:
     # Document readiness
     document_readiness_ratio: float
 
+    # Geographic context for explanation (optional, used in breakdown)
+    profile_region: str | None = None
+    profile_city: str | None = None
+    eligible_regions: list | None = None
+    eligible_cities: list | None = None
+
 
 @dataclass
 class ScoringResult:

@@ -1,10 +1,17 @@
 import { FormEvent, useCallback, useState } from "react";
 import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import type { StudentProfile } from "./types";
 import { Navbar } from "./components/Navbar";
 import { HeroSection } from "./components/HeroSection";
 import { ProfileForm } from "./components/ProfileForm";
 import { MatchResultsPage } from "./pages/MatchResultsPage";
+import { ScholarshipDetailPage } from "./pages/ScholarshipDetailPage";
+import { AboutPage } from "./pages/AboutPage";
+import { TermsPage } from "./pages/TermsPage";
+import { PrivacyPage } from "./pages/PrivacyPage";
+import { SettingsPage } from "./pages/SettingsPage";
+import { ChangelogPage } from "./pages/ChangelogPage";
 import { AdminPage } from "./pages/AdminPage";
 import { ScholarshipList } from "./components/ScholarshipList";
 import { Footer } from "./components/Footer";
@@ -38,6 +45,7 @@ function ProfilePage() {
           .split(",")
           .map((n) => n.trim())
           .filter(Boolean);
+      const preferredCourses = [getStr("preferred_course_1"), getStr("preferred_course_2"), getStr("preferred_course_3")].filter(Boolean);
 
       const profile: StudentProfile = {
         full_name: String(formData.get("full_name") ?? ""),
@@ -58,7 +66,8 @@ function ProfilePage() {
         gwa_raw: getStr("gwa_raw"),
         gwa_scale: getStr("gwa_scale"),
         field_of_study_broad: getStr("field_of_study_broad"),
-        field_of_study_specific: getStr("field_of_study_specific"),
+        field_of_study_specific: preferredCourses[0] ?? getStr("field_of_study_specific"),
+        preferred_courses: preferredCourses,
         extracurriculars: getList("extracurriculars"),
         awards: getList("awards"),
         household_income_annual: getNum("household_income_annual"),
@@ -113,7 +122,13 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<ProfilePage />} />
       <Route path="/match/:profileId" element={<MatchResultsPage />} />
+      <Route path="/scholarship/:id" element={<ScholarshipDetailPage />} />
       <Route path="/scholarships" element={<ScholarshipList />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/settings" element={<SettingsPage />} />
+      <Route path="/changelog" element={<ChangelogPage />} />
       <Route path="/admin" element={<AdminPage />} />
     </Routes>
   );
@@ -121,9 +136,9 @@ function AppRoutes() {
 
 function AppLayout() {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
       <Navbar />
-      <main className="bg-slate-50">
+      <main className="bg-slate-50 dark:bg-slate-900">
         <AppRoutes />
       </main>
       <Footer />
@@ -133,8 +148,10 @@ function AppLayout() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AppLayout />
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <AppLayout />
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }

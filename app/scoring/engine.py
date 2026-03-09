@@ -10,7 +10,6 @@ from app.scoring.components import (
     score_field,
     score_geographic,
     score_income,
-    score_readiness,
 )
 from app.scoring.config import ScoringConfig
 from app.scoring.explanation import (
@@ -50,7 +49,6 @@ class WeightedDeterministicScorer(ScoringEnginePort):
                 payload.equity_flags,
                 payload.priority_groups,
             ),
-            "readiness": score_readiness(payload.document_readiness_ratio),
         }
 
         # 2. Weighted sum -> base score (0-100)
@@ -92,8 +90,6 @@ class WeightedDeterministicScorer(ScoringEnginePort):
             eligibility_status=True,
             breakdown=breakdown,
             explanation=explanation,
-            readiness_score=round(
-                (payload.document_readiness_ratio or 0) * 100, 2
-            ),
+            readiness_score=0.0,  # No longer used in scoring; documents shown on detail page only
             confidence=confidence,
         )

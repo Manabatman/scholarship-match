@@ -88,18 +88,31 @@ def build_breakdown(
 
     def _geographic_detail() -> tuple[str, str, str]:
         level = payload.geographic_match_level or "none"
-        if level == "none":
-            return ("missing", level, "Region/City")
-        return ("met", level, "Region/City")
+        profile_region = getattr(payload, "profile_region", None) or ""
+        profile_city = getattr(payload, "profile_city", None) or ""
+        eligible_regions = getattr(payload, "eligible_regions", None) or []
+        eligible_cities = getattr(payload, "eligible_cities", None) or []
 
-    def _readiness_detail() -> tuple[str, str, str]:
-        ratio = payload.document_readiness_ratio
-        pct = int(ratio * 100) if ratio is not None else 0
-        if ratio is None or ratio >= 1.0:
-            return ("ready", f"{pct}% ready", "Documents")
-        if ratio > 0:
-            return ("partial", f"{pct}% ready", "Documents")
-        return ("missing", "0% ready", "Documents")
+        user_display = profile_region or profile_city or "Not provided"
+        if profile_region and profile_city:
+            user_display = f"{profile_region}, {profile_city}"
+        elif profile_city:
+            user_display = profile_city
+
+        if not eligible_regions and not eligible_cities:
+            req_display = "Nationwide"
+        elif eligible_cities:
+            req_display = ", ".join(eligible_cities[:3])
+            if len(eligible_cities) > 3:
+                req_display += f" (+{len(eligible_cities) - 3} more)"
+        else:
+            req_display = ", ".join(str(r) for r in eligible_regions[:3])
+            if len(eligible_regions) > 3:
+                req_display += f" (+{len(eligible_regions) - 3} more)"
+
+        if level == "none":
+            return ("missing", user_display, req_display)
+        return ("met", user_display, req_display)
 
     def _equity_detail() -> tuple[str, str, str]:
         match_count = 0
@@ -117,10 +130,9 @@ def build_breakdown(
     soc_status, soc_user, soc_req = _socioeconomic_detail()
     field_status, field_user, field_req = _field_detail()
     geo_status, geo_user, geo_req = _geographic_detail()
-    read_status, read_user, read_req = _readiness_detail()
     eq_status, eq_user, eq_req = _equity_detail()
 
-    return {
+    result = {
         "academic": {
             "status": ac_status,
             "user_value": ac_user,
@@ -153,14 +165,6 @@ def build_breakdown(
             "weighted": round((components.get("geographic", 0) * weights.get("geographic", 0.1)) * 100, 1),
             "max_possible": round(weights.get("geographic", 0.1) * 100, 1),
         },
-        "document_readiness": {
-            "status": read_status,
-            "user_value": read_user,
-            "requirement_value": read_req,
-            "score": components.get("readiness", 0),
-            "weighted": round((components.get("readiness", 0) * weights.get("readiness", 0.05)) * 100, 1),
-            "max_possible": round(weights.get("readiness", 0.05) * 100, 1),
-        },
         "priority_group": {
             "status": eq_status,
             "user_value": eq_user,
@@ -170,6 +174,7 @@ def build_breakdown(
             "max_possible": round(weights.get("equity_priority", 0.1) * 100, 1),
         },
     }
+    return result
 
 
 def build_explanation(
@@ -202,9 +207,6 @@ def build_explanation(
         lines.append("Island group match")
     if equity_reason and equity_multiplier > 1.0:
         lines.append(f"Equity priority: {equity_reason}")
-    if payload.document_readiness_ratio is not None and 0 < payload.document_readiness_ratio < 1.0:
-        pct = int(payload.document_readiness_ratio * 100)
-        lines.append(f"Document readiness: {pct}% — some documents still needed")
     return lines
 
 

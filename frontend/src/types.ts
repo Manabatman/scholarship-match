@@ -20,6 +20,7 @@ export interface StudentProfile {
   gwa_normalized?: number;
   field_of_study_broad?: string;
   field_of_study_specific?: string;
+  preferred_courses?: string[];
   extracurriculars?: string[];
   awards?: string[];
   household_income_annual?: number;
@@ -77,6 +78,7 @@ export interface MatchResult {
   benefit_books?: boolean;
   benefit_total_value?: number | null;
   application_deadline?: string | null;
+  application_open_date?: string | null;
   required_documents?: string[];
 }
 

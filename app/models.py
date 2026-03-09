@@ -40,7 +40,8 @@ class Student(Base):
     gwa_scale = Column(String)  # 5.0_scale | 4.0_scale | percentage
     gwa_normalized = Column(Float)  # 0-100 normalized percentage
     field_of_study_broad = Column(String)  # PSCED broad discipline code
-    field_of_study_specific = Column(String)  # Specific course/major name
+    field_of_study_specific = Column(String)  # Specific course/major name (legacy; first of preferred_courses)
+    preferred_courses = Column(Text)  # JSON list of up to 3 course names, e.g. ["BS Computer Science", "BS IT"]
     extracurriculars = Column(Text)  # JSON list
     awards = Column(Text)  # JSON list
 

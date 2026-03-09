@@ -1,5 +1,5 @@
 from datetime import date
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import List, Optional, Any
 
 
@@ -45,6 +45,7 @@ class StudentProfile(BaseModel):
     gwa_normalized: Optional[float] = None
     field_of_study_broad: Optional[str] = None
     field_of_study_specific: Optional[str] = None
+    preferred_courses: Optional[List[str]] = []
     extracurriculars: Optional[List[str]] = []
     awards: Optional[List[str]] = []
     household_income_annual: Optional[int] = None
@@ -85,6 +86,7 @@ class StudentProfileResponse(BaseModel):
     gwa_normalized: Optional[float] = None
     field_of_study_broad: Optional[str] = None
     field_of_study_specific: Optional[str] = None
+    preferred_courses: Optional[List[str]] = []
     extracurriculars: Optional[List[str]] = []
     awards: Optional[List[str]] = []
     household_income_annual: Optional[int] = None
@@ -145,6 +147,13 @@ class Scholarship(BaseModel):
     application_open_date: Optional[date] = None
     academic_year_target: Optional[str] = None
     is_active: Optional[bool] = True
+
+    @field_validator("link")
+    @classmethod
+    def validate_link(cls, v: Optional[str]) -> Optional[str]:
+        if v and v.strip() and not v.strip().startswith(("http://", "https://")):
+            raise ValueError("Link must be a valid HTTP or HTTPS URL")
+        return v
 
 
 class ScholarshipResponse(BaseModel):

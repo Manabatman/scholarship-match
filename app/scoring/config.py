@@ -7,13 +7,13 @@ from dataclasses import dataclass, field
 
 
 def _default_weights() -> dict[str, float]:
+    # Document readiness removed from scoring (M4) - displayed on detail page only
     return {
         "academic": 0.30,
-        "income": 0.25,
-        "field_alignment": 0.20,
+        "income": 0.28,
+        "field_alignment": 0.22,
         "geographic": 0.10,
         "equity_priority": 0.10,
-        "readiness": 0.05,
     }
 
 

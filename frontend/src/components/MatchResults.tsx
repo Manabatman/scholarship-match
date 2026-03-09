@@ -11,9 +11,9 @@ export function MatchResults({ matches, onReset }: MatchResultsProps) {
     <section id="scholarships" className="py-12">
       <div className="mx-auto max-w-6xl px-4">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-2xl font-semibold text-slate-900">
+          <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
             Your Top Matches
-            <span className="ml-2 rounded-full bg-primary-100 px-2.5 py-0.5 text-sm font-medium text-primary-800">
+            <span className="ml-2 rounded-full bg-primary-100 dark:bg-primary-900 px-2.5 py-0.5 text-sm font-medium text-primary-800 dark:text-primary-300">
               {matches.length}
             </span>
           </h2>
@@ -28,8 +28,8 @@ export function MatchResults({ matches, onReset }: MatchResultsProps) {
         </div>
 
         {matches.length === 0 ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-md">
-            <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-slate-100">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-12 text-center shadow-md">
+            <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700">
               <svg
                 className="h-12 w-12 text-slate-400"
                 fill="none"
@@ -45,10 +45,10 @@ export function MatchResults({ matches, onReset }: MatchResultsProps) {
                 />
               </svg>
             </div>
-            <p className="text-lg font-medium text-slate-700">
+            <p className="text-lg font-medium text-slate-700 dark:text-slate-300">
               No matches found yet
             </p>
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
               Try adjusting your age, region, or needs and run the matching again.
             </p>
             <button

@@ -11,7 +11,7 @@ export function SelectedChips({
 }: SelectedChipsProps) {
   if (selected.length === 0) {
     return (
-      <p className="text-sm text-slate-500 italic">{emptyMessage}</p>
+      <p className="text-sm text-slate-500 dark:text-slate-400 italic">{emptyMessage}</p>
     );
   }
 
@@ -20,7 +20,7 @@ export function SelectedChips({
       {selected.map((tag) => (
         <span
           key={tag}
-          className="inline-flex items-center gap-1.5 rounded-full bg-primary-100 px-3 py-1.5 text-sm font-medium text-primary-800"
+          className="inline-flex items-center gap-1.5 rounded-full bg-primary-100 dark:bg-primary-900 px-3 py-1.5 text-sm font-medium text-primary-800 dark:text-primary-300"
         >
           {tag}
           <button

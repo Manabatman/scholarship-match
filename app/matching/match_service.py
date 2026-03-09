@@ -28,12 +28,16 @@ def _parse_json_list(val, default=None):
 def _get_field_match_level(
     profile_field_broad: str | None,
     profile_field_specific: str | None,
+    profile_preferred_courses: list,
     profile_needs: list,
     eligible_psced: list,
     eligible_specific: list,
     needs_tags: list,
 ) -> str:
-    """Determine field match level: exact, broad, partial, none."""
+    """Determine field match level: exact, broad, partial, none.
+    Uses FIELD_HIERARCHY so e.g. Engineering matches STEM-eligible scholarships as 'broad'."""
+    from app.taxonomy.psced_fields import FIELD_HIERARCHY
+
     eligible_psced = [str(x).strip().lower() for x in (eligible_psced or []) if x]
     eligible_specific = [str(x).strip().lower() for x in (eligible_specific or []) if x]
     needs_tags = [str(x).strip().lower() for x in (needs_tags or []) if x]
@@ -41,12 +45,26 @@ def _get_field_match_level(
     profile_specific = (profile_field_specific or "").strip().lower()
     profile_needs = [str(x).strip().lower() for x in (profile_needs or []) if x]
 
-    if profile_broad and eligible_psced:
-        if profile_broad in eligible_psced:
+    profile_fields_to_check = [profile_broad] if profile_broad else []
+    if profile_field_broad:
+        parents = FIELD_HIERARCHY.get(profile_field_broad.strip())
+        if parents:
+            profile_fields_to_check.extend(p.strip().lower() for p in parents)
+
+    preferred_courses = [str(x).strip().lower() for x in (profile_preferred_courses or []) if x]
+
+    if profile_fields_to_check and eligible_psced:
+        for pf in profile_fields_to_check:
+            if pf in eligible_psced:
+                return "exact"
+        for pf in profile_fields_to_check:
+            for ep in eligible_psced:
+                if ep in pf or pf in ep:
+                    return "broad"
+    courses_to_check = preferred_courses or ([profile_specific] if profile_specific else [])
+    for course in courses_to_check:
+        if course and eligible_specific and (course in eligible_specific or any(es in course for es in eligible_specific)):
             return "exact"
-        for ep in eligible_psced:
-            if ep in profile_broad or profile_broad in ep:
-                return "broad"
     if profile_specific and eligible_specific:
         if profile_specific in eligible_specific or any(ps in profile_specific for ps in eligible_specific):
             return "exact"
@@ -181,6 +199,7 @@ class MatchService:
         field_match = _get_field_match_level(
             profile.get("field_of_study_broad"),
             profile.get("field_of_study_specific"),
+            _parse_json_list(profile.get("preferred_courses")),
             _parse_json_list(profile.get("needs")),
             _parse_json_list(scholarship.get("eligible_courses_psced")),
             _parse_json_list(scholarship.get("eligible_courses_specific")),
@@ -209,6 +228,10 @@ class MatchService:
             scholarship.get("required_documents"),
         )
 
+        eligible_regions = _parse_json_list(scholarship.get("eligible_regions"))
+        legacy_regions = _parse_json_list(scholarship.get("regions"))
+        eligible_cities = _parse_json_list(scholarship.get("eligible_cities"))
+
         return ScoringPayload(
             gwa_normalized=profile.get("gwa_normalized"),
             household_income_annual=income,
@@ -225,6 +248,10 @@ class MatchService:
             max_income_threshold=scholarship.get("max_income_threshold"),
             priority_groups=_parse_json_list(scholarship.get("priority_groups")),
             document_readiness_ratio=readiness.ratio,
+            profile_region=profile.get("region"),
+            profile_city=profile.get("city_municipality"),
+            eligible_regions=eligible_regions or legacy_regions,
+            eligible_cities=eligible_cities,
         )
 
     def _build_match_result(self, scholarship: dict, scoring_result: ScoringResult) -> dict:
@@ -256,6 +283,11 @@ class MatchService:
                 scholarship.get("application_deadline").isoformat()
                 if hasattr(scholarship.get("application_deadline"), "isoformat")
                 else scholarship.get("application_deadline")
+            ),
+            "application_open_date": (
+                scholarship.get("application_open_date").isoformat()
+                if hasattr(scholarship.get("application_open_date"), "isoformat")
+                else scholarship.get("application_open_date")
             ),
             "required_documents": _parse_json_list(scholarship.get("required_documents")),
         }
