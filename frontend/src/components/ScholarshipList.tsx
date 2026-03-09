@@ -1,12 +1,9 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import type { ScholarshipInfo } from "../types";
 
 const API_BASE_URL =
-  (import.meta as any).env.VITE_API_BASE_URL ?? "http://localhost:8000";
-
-interface ScholarshipListProps {
-  onBuildProfile: () => void;
-}
+  (import.meta as unknown as { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL ?? "http://localhost:8000";
 
 function ScholarshipBrowseCard({ s }: { s: ScholarshipInfo }) {
   const link = s.link && s.link.trim() ? s.link : "#";
@@ -127,14 +124,13 @@ export function ScholarshipList({ onBuildProfile }: ScholarshipListProps) {
               {scholarships.length}
             </span>
           </h2>
-          <button
-            type="button"
-            onClick={onBuildProfile}
+          <Link
+            to="/"
             className="w-fit rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white shadow-md transition hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
             aria-label="Build your profile to get personalized matches"
           >
             Build Profile for Matches
-          </button>
+          </Link>
         </div>
 
         {loading && (

@@ -1,22 +1,21 @@
 import { FormEvent, useCallback, useState } from "react";
-import type { MatchResult, StudentProfile } from "./types";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import type { StudentProfile } from "./types";
 import { Navbar } from "./components/Navbar";
 import { HeroSection } from "./components/HeroSection";
 import { ProfileForm } from "./components/ProfileForm";
-import { MatchResults } from "./components/MatchResults";
+import { MatchResultsPage } from "./pages/MatchResultsPage";
+import { AdminPage } from "./pages/AdminPage";
 import { ScholarshipList } from "./components/ScholarshipList";
 import { Footer } from "./components/Footer";
 
 const API_BASE_URL =
-  (import.meta as any).env.VITE_API_BASE_URL ?? "http://localhost:8000";
+  (import.meta as unknown as { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL ?? "http://localhost:8000";
 
-type Step = "profile" | "results" | "scholarships";
-
-function App() {
-  const [step, setStep] = useState<Step>("profile");
+function ProfilePage() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [matches, setMatches] = useState<MatchResult[]>([]);
 
   const handleSubmitProfile = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -77,10 +76,8 @@ function App() {
       try {
         const profileRes = await fetch(`${API_BASE_URL}/api/v1/profiles`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(profile)
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(profile),
         });
 
         if (!profileRes.ok) {
@@ -89,89 +86,55 @@ function App() {
         }
 
         const created = await profileRes.json();
-
-        const matchesRes = await fetch(
-          `${API_BASE_URL}/api/v1/matches/${created.id}`
-        );
-        if (!matchesRes.ok) {
-          throw new Error("Unable to fetch matches");
-        }
-        const matchData = await matchesRes.json();
-        setMatches(matchData.matches ?? []);
-        setStep("results");
+        navigate(`/match/${created.id}`);
       } catch (err: unknown) {
-        setError(
-          err instanceof Error ? err.message : "Something went wrong"
-        );
+        setError(err instanceof Error ? err.message : "Something went wrong");
       } finally {
         setLoading(false);
       }
     },
-    []
+    [navigate]
   );
 
   const scrollToProfile = useCallback(() => {
     document.getElementById("profile")?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  const resetToProfile = useCallback(() => {
-    setStep("profile");
-    setMatches([]);
-    setError(null);
-  }, []);
+  return (
+    <>
+      <HeroSection onCtaClick={scrollToProfile} />
+      <ProfileForm onSubmit={handleSubmitProfile} loading={loading} error={error} />
+    </>
+  );
+}
 
-  const goToScholarships = useCallback(() => {
-    setStep("scholarships");
-  }, []);
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<ProfilePage />} />
+      <Route path="/match/:profileId" element={<MatchResultsPage />} />
+      <Route path="/scholarships" element={<ScholarshipList />} />
+      <Route path="/admin" element={<AdminPage />} />
+    </Routes>
+  );
+}
 
-  const goToProfile = useCallback(() => {
-    setStep("profile");
-    setError(null);
-  }, []);
-
+function AppLayout() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <Navbar
-        onBuildProfile={
-          step === "profile"
-            ? scrollToProfile
-            : step === "scholarships"
-              ? goToProfile
-              : resetToProfile
-        }
-        onScholarships={
-          step === "scholarships"
-            ? () =>
-                document
-                  .getElementById("scholarships")
-                  ?.scrollIntoView({ behavior: "smooth" })
-            : goToScholarships
-        }
-        onAbout={() =>
-          document.getElementById("about")?.scrollIntoView({ behavior: "smooth" })
-        }
-      />
+      <Navbar />
       <main className="bg-slate-50">
-        {step === "profile" && (
-          <>
-            <HeroSection onCtaClick={scrollToProfile} />
-            <ProfileForm
-              onSubmit={handleSubmitProfile}
-              loading={loading}
-              error={error}
-            />
-          </>
-        )}
-        {step === "results" && (
-          <MatchResults matches={matches} onReset={resetToProfile} />
-        )}
-        {step === "scholarships" && (
-          <ScholarshipList onBuildProfile={goToProfile} />
-        )}
+        <AppRoutes />
       </main>
       <Footer />
     </div>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppLayout />
+    </BrowserRouter>
+  );
+}

@@ -1,10 +1,14 @@
-from fastapi import APIRouter, Depends
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 import json
 import time
 
 from app import models, schemas
+from app.auth import get_current_user_id
 from app.db import get_db
+from app.limiter import limiter
 
 router = APIRouter()
 
@@ -99,7 +103,11 @@ def _scholarship_to_dict(s):
 
 
 @router.post("/scholarships", response_model=schemas.ScholarshipResponse)
-def create_scholarship(scholarship: schemas.Scholarship, db: Session = Depends(get_db)):
+def create_scholarship(
+    scholarship: schemas.Scholarship,
+    db: Session = Depends(get_db),
+    user_id: Annotated[int | None, Depends(get_current_user_id)] = None,
+):
     db_scholarship = models.Scholarship(
         title=scholarship.title,
         provider=scholarship.provider,
@@ -144,5 +152,92 @@ def create_scholarship(scholarship: schemas.Scholarship, db: Session = Depends(g
 
 
 @router.get("/scholarships", response_model=list[schemas.ScholarshipResponse])
-def list_scholarships(db: Session = Depends(get_db)):
+@limiter.limit("60/minute")
+def list_scholarships(
+    request: Request,
+    include_inactive: bool = False,
+    db: Session = Depends(get_db),
+    user_id: Annotated[int | None, Depends(get_current_user_id)] = None,
+):
+    """List scholarships. When include_inactive=true and authenticated, returns all."""
+    if include_inactive and user_id is not None:
+        scholarships = db.query(models.Scholarship).all()
+        return [_scholarship_to_response(s) for s in scholarships]
     return get_cached_scholarship_dicts(db)
+
+
+@router.get("/scholarships/{scholarship_id}", response_model=schemas.ScholarshipResponse)
+def get_scholarship(
+    scholarship_id: int,
+    db: Session = Depends(get_db),
+):
+    s = db.query(models.Scholarship).filter(models.Scholarship.id == scholarship_id).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="Scholarship not found")
+    return _scholarship_to_response(s)
+
+
+@router.put("/scholarships/{scholarship_id}", response_model=schemas.ScholarshipResponse)
+def update_scholarship(
+    scholarship_id: int,
+    scholarship: schemas.Scholarship,
+    db: Session = Depends(get_db),
+    user_id: Annotated[int | None, Depends(get_current_user_id)] = None,
+):
+    s = db.query(models.Scholarship).filter(models.Scholarship.id == scholarship_id).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="Scholarship not found")
+    s.title = scholarship.title
+    s.provider = scholarship.provider
+    s.countries = ",".join(scholarship.countries or [])
+    s.regions = ",".join(scholarship.regions or [])
+    s.min_age = scholarship.min_age
+    s.max_age = scholarship.max_age
+    s.needs_tags = json.dumps(scholarship.needs_tags or [])
+    s.level = scholarship.level
+    s.link = scholarship.link
+    s.description = scholarship.description
+    s.provider_type = scholarship.provider_type
+    s.scholarship_type = scholarship.scholarship_type
+    s.eligible_levels = json.dumps(scholarship.eligible_levels or [])
+    s.eligible_regions = json.dumps(scholarship.eligible_regions or scholarship.regions or [])
+    s.eligible_cities = json.dumps(scholarship.eligible_cities or [])
+    s.residency_required = scholarship.residency_required or False
+    s.eligible_school_types = json.dumps(scholarship.eligible_school_types or ["Public", "Private"])
+    s.eligible_courses_psced = json.dumps(scholarship.eligible_courses_psced or [])
+    s.max_income_threshold = scholarship.max_income_threshold
+    s.min_gwa_normalized = scholarship.min_gwa_normalized
+    s.priority_groups = json.dumps(scholarship.priority_groups or [])
+    s.benefit_tuition = scholarship.benefit_tuition or False
+    s.benefit_allowance_monthly = scholarship.benefit_allowance_monthly
+    s.benefit_books = scholarship.benefit_books or False
+    s.benefit_total_value = scholarship.benefit_total_value
+    s.required_documents = json.dumps(scholarship.required_documents or [])
+    s.has_qualifying_exam = scholarship.has_qualifying_exam or False
+    s.has_interview = scholarship.has_interview or False
+    s.has_essay_requirement = scholarship.has_essay_requirement or False
+    s.has_return_service = scholarship.has_return_service or False
+    s.application_deadline = scholarship.application_deadline
+    s.application_open_date = scholarship.application_open_date
+    s.academic_year_target = scholarship.academic_year_target
+    if scholarship.is_active is not None:
+        s.is_active = scholarship.is_active
+    db.commit()
+    db.refresh(s)
+    _invalidate_scholarship_cache()
+    return _scholarship_to_response(s)
+
+
+@router.delete("/scholarships/{scholarship_id}")
+def delete_scholarship(
+    scholarship_id: int,
+    db: Session = Depends(get_db),
+    user_id: Annotated[int | None, Depends(get_current_user_id)] = None,
+):
+    s = db.query(models.Scholarship).filter(models.Scholarship.id == scholarship_id).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="Scholarship not found")
+    s.is_active = False
+    db.commit()
+    _invalidate_scholarship_cache()
+    return {"status": "deactivated"}

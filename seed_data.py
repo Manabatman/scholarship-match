@@ -1,100 +1,21 @@
 """
 Seed script to populate the database with sample scholarships and profiles.
-Adds migration for new columns if DB already exists.
+Run `alembic upgrade head` before this script to ensure schema is up to date.
+For fresh SQLite dev, Base.metadata.create_all is used as fallback.
 """
 import json
 from datetime import date
 from app.db import SessionLocal, engine, Base
 from app import models
 
-# Create tables
-Base.metadata.create_all(bind=engine)
-
-
-def migrate_schema():
-    """Add new columns if they don't exist (for existing DBs)."""
-    from sqlalchemy import text
-
-    student_columns = [
-        ("education_level", "VARCHAR"),
-        ("current_academic_stage", "VARCHAR"),
-        ("target_academic_year", "VARCHAR"),
-        ("province", "VARCHAR"),
-        ("city_municipality", "VARCHAR"),
-        ("barangay", "VARCHAR"),
-        ("school_type", "VARCHAR"),
-        ("gwa_raw", "VARCHAR"),
-        ("gwa_scale", "VARCHAR"),
-        ("gwa_normalized", "REAL"),
-        ("field_of_study_broad", "VARCHAR"),
-        ("field_of_study_specific", "VARCHAR"),
-        ("target_school", "VARCHAR"),
-        ("extracurriculars", "TEXT"),
-        ("awards", "TEXT"),
-        ("household_income_annual", "INTEGER"),
-        ("income_bracket", "VARCHAR"),
-        ("is_underprivileged", "BOOLEAN"),
-        ("is_pwd", "BOOLEAN"),
-        ("is_indigenous_people", "BOOLEAN"),
-        ("ip_tribe_name", "VARCHAR"),
-        ("is_solo_parent_dependent", "BOOLEAN"),
-        ("is_ofw_dependent", "BOOLEAN"),
-        ("ofw_parent_type", "VARCHAR"),
-        ("is_farmer_fisher_dependent", "BOOLEAN"),
-        ("is_4ps_listahanan", "BOOLEAN"),
-        ("parent_occupation", "VARCHAR"),
-        ("documents", "TEXT"),
-        ("gender", "VARCHAR"),
-        ("birthdate", "DATE"),
-        ("profile_completeness", "REAL"),
-    ]
-
-    scholarship_columns = [
-        ("eligible_levels", "TEXT"),
-        ("eligible_regions", "TEXT"),
-        ("eligible_cities", "TEXT"),
-        ("residency_required", "BOOLEAN"),
-        ("eligible_school_types", "TEXT"),
-        ("eligible_courses_psced", "TEXT"),
-        ("eligible_courses_specific", "TEXT"),
-        ("citizenship_required", "VARCHAR"),
-        ("max_income_threshold", "INTEGER"),
-        ("min_gwa_normalized", "REAL"),
-        ("provider_type", "VARCHAR"),
-        ("scholarship_type", "VARCHAR"),
-        ("priority_groups", "TEXT"),
-        ("preferred_extracurriculars", "TEXT"),
-        ("preferred_awards", "TEXT"),
-        ("benefit_tuition", "BOOLEAN"),
-        ("benefit_allowance_monthly", "INTEGER"),
-        ("benefit_books", "BOOLEAN"),
-        ("benefit_miscellaneous", "TEXT"),
-        ("benefit_total_value", "INTEGER"),
-        ("required_documents", "TEXT"),
-        ("has_qualifying_exam", "BOOLEAN"),
-        ("has_interview", "BOOLEAN"),
-        ("has_essay_requirement", "BOOLEAN"),
-        ("has_return_service", "BOOLEAN"),
-        ("application_deadline", "DATE"),
-        ("application_open_date", "DATE"),
-        ("academic_year_target", "VARCHAR"),
-        ("is_active", "BOOLEAN"),
-    ]
-
-    for table, col, col_type in [
-        ("students", c, t) for c, t in student_columns
-    ] + [("scholarships", c, t) for c, t in scholarship_columns]:
-        try:
-            with engine.connect() as conn:
-                conn.execute(text(  # noqa: S608
-                    f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"
-                ))
-                conn.commit()
-        except Exception:
-            pass
-
-
-migrate_schema()
+# Ensure schema exists: use Alembic if available, else create_all for dev
+try:
+    from alembic import command
+    from alembic.config import Config
+    alembic_cfg = Config("alembic.ini")
+    command.upgrade(alembic_cfg, "head")
+except Exception:
+    Base.metadata.create_all(bind=engine)
 
 db = SessionLocal()
 

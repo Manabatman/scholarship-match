@@ -97,4 +97,5 @@ export interface ScholarshipInfo {
   benefit_books?: boolean;
   benefit_total_value?: number | null;
   application_deadline?: string | null;
+  is_active?: boolean;
 }

@@ -1,11 +1,14 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 import json
 from datetime import date
+from typing import Annotated
 
 from app import models, schemas
+from app.auth import get_current_user_id
 from app.db import get_db
+from app.limiter import limiter
 from app.taxonomy.income_brackets import get_income_bracket
 from app.taxonomy.gwa_normalizer import normalize_gwa
 
@@ -119,14 +122,30 @@ def _profile_to_db_dict(profile: schemas.StudentProfile) -> dict:
 
 
 @router.get("/profiles", response_model=list[schemas.StudentProfileResponse])
-def list_profiles(db: Session = Depends(get_db)):
-    profiles = db.query(models.Student).all()
+def list_profiles(
+    db: Session = Depends(get_db),
+    user_id: Annotated[int | None, Depends(get_current_user_id)] = None,
+):
+    """List profiles. When auth enabled, only lists current user's profiles."""
+    query = db.query(models.Student)
+    if user_id is not None:
+        query = query.filter(models.Student.user_id == user_id)
+    profiles = query.all()
     return [_profile_to_response(p) for p in profiles]
 
 
 @router.post("/profiles", response_model=schemas.StudentProfileResponse)
-def create_profile(profile: schemas.StudentProfile, db: Session = Depends(get_db)):
+@limiter.limit("20/minute")
+def create_profile(
+    request: Request,
+    profile: schemas.StudentProfile,
+    db: Session = Depends(get_db),
+    user_id: Annotated[int | None, Depends(get_current_user_id)] = None,
+):
+    """Create or update profile. Requires auth in production."""
     data = _profile_to_db_dict(profile)
+    if user_id is not None:
+        data["user_id"] = user_id
 
     # Try insert first. If a concurrent request already created this email,
     # the unique constraint fires an IntegrityError and we fall back to update.
@@ -151,10 +170,16 @@ def create_profile(profile: schemas.StudentProfile, db: Session = Depends(get_db
 
 
 @router.get("/profiles/{profile_id}", response_model=schemas.StudentProfileResponse)
-def get_profile(profile_id: int, db: Session = Depends(get_db)):
+def get_profile(
+    profile_id: int,
+    db: Session = Depends(get_db),
+    user_id: Annotated[int | None, Depends(get_current_user_id)] = None,
+):
     profile = db.query(models.Student).filter(models.Student.id == profile_id).first()
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
+    if user_id is not None and profile.user_id is not None and profile.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
     return _profile_to_response(profile)
 
 

@@ -1,5 +1,15 @@
-from sqlalchemy import Column, Integer, String, Text, Float, Boolean, Date
+from sqlalchemy import Column, Integer, String, Text, Float, Boolean, Date, ForeignKey
 from app.db import Base
+
+
+class User(Base):
+    """User account for authentication."""
+
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, nullable=False, unique=True)
+    password_hash = Column(String, nullable=False)
 
 
 class Student(Base):
@@ -9,6 +19,7 @@ class Student(Base):
 
     # === CORE IDENTITY ===
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     full_name = Column(String, nullable=False)
     email = Column(String, nullable=False, unique=True)
 
