@@ -115,7 +115,7 @@ def _school_type_matches(profile_school_type: str | None, eligible_school_types:
     for st in eligible_school_types:
         if st and st.strip().lower() == profile_st:
             return True
-    return True  # Default allow if no strict filter
+    return False  # Profile school type not in eligible list
 
 
 def _income_matches(

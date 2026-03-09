@@ -1,10 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 
-from app import models
 from app.db import get_db
 from app.api.v1.profiles import get_profile_dict
-from app.api.v1.scholarships import _scholarship_to_dict
+from app.api.v1.scholarships import get_cached_scholarship_dicts
 from app.matching.match_service import MatchService
 
 router = APIRouter()
@@ -17,10 +16,7 @@ def get_matches(profile_id: int, db: Session = Depends(get_db)):
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
 
-    scholarships = db.query(models.Scholarship).filter(
-        models.Scholarship.is_active != False  # noqa: E712
-    ).all()
-    scholarship_dicts = [_scholarship_to_dict(s) for s in scholarships]
+    scholarship_dicts = get_cached_scholarship_dicts(db)
 
     results = match_service.get_matches(profile, scholarship_dicts)
 

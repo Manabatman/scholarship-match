@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 import json
 from datetime import date
 
@@ -126,19 +127,27 @@ def list_profiles(db: Session = Depends(get_db)):
 @router.post("/profiles", response_model=schemas.StudentProfileResponse)
 def create_profile(profile: schemas.StudentProfile, db: Session = Depends(get_db)):
     data = _profile_to_db_dict(profile)
-    existing = db.query(models.Student).filter(models.Student.email == profile.email).first()
-    if existing:
+
+    # Try insert first. If a concurrent request already created this email,
+    # the unique constraint fires an IntegrityError and we fall back to update.
+    try:
+        db_profile = models.Student(**data)
+        db.add(db_profile)
+        db.commit()
+        db.refresh(db_profile)
+        return _profile_to_response(db_profile)
+    except IntegrityError:
+        db.rollback()
+        existing = db.query(models.Student).filter(
+            models.Student.email == profile.email
+        ).first()
+        if not existing:
+            raise HTTPException(status_code=500, detail="Profile conflict")
         for k, v in data.items():
             setattr(existing, k, v)
         db.commit()
         db.refresh(existing)
         return _profile_to_response(existing)
-
-    db_profile = models.Student(**data)
-    db.add(db_profile)
-    db.commit()
-    db.refresh(db_profile)
-    return _profile_to_response(db_profile)
 
 
 @router.get("/profiles/{profile_id}", response_model=schemas.StudentProfileResponse)

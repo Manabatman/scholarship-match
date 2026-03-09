@@ -5,7 +5,7 @@ Match service - orchestrates hard filtering, scoring, and result assembly.
 import json
 from app.matching.hard_filters import filter_scholarships
 from app.matching.scoring_port import ScoringEnginePort, ScoringPayload, ScoringResult
-from app.matching.legacy_scorer import LegacyRuleScorer
+from app.scoring import WeightedDeterministicScorer
 from app.taxonomy.regions import normalize_region
 from app.taxonomy.income_brackets import get_income_bracket
 from app.documents.readiness import compute_readiness
@@ -136,7 +136,7 @@ class MatchService:
     """Orchestrates hard filter -> score -> explain -> rank."""
 
     def __init__(self, scoring_engine: ScoringEnginePort | None = None):
-        self.scoring_engine = scoring_engine or LegacyRuleScorer()
+        self.scoring_engine = scoring_engine or WeightedDeterministicScorer()
 
     def get_matches(self, profile: dict, scholarships: list) -> list[dict]:
         """

@@ -1,11 +1,36 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 import json
+import time
 
 from app import models, schemas
 from app.db import get_db
 
 router = APIRouter()
+
+_scholarship_cache: list | None = None
+_scholarship_cache_time: float = 0.0
+_SCHOLARSHIP_TTL: int = 300  # 5 minutes
+
+
+def _invalidate_scholarship_cache():
+    global _scholarship_cache, _scholarship_cache_time
+    _scholarship_cache = None
+    _scholarship_cache_time = 0.0
+
+
+def get_cached_scholarship_dicts(db: Session) -> list[dict]:
+    """Return scholarship dicts from cache, querying DB on miss or TTL expiry."""
+    global _scholarship_cache, _scholarship_cache_time
+    now = time.monotonic()
+    if _scholarship_cache is not None and (now - _scholarship_cache_time) < _SCHOLARSHIP_TTL:
+        return _scholarship_cache
+    scholarships = db.query(models.Scholarship).filter(
+        models.Scholarship.is_active != False  # noqa: E712
+    ).all()
+    _scholarship_cache = [_scholarship_to_dict(s) for s in scholarships]
+    _scholarship_cache_time = now
+    return _scholarship_cache
 
 
 def _parse_json(val, default=None):
@@ -114,12 +139,10 @@ def create_scholarship(scholarship: schemas.Scholarship, db: Session = Depends(g
     db.add(db_scholarship)
     db.commit()
     db.refresh(db_scholarship)
+    _invalidate_scholarship_cache()
     return _scholarship_to_response(db_scholarship)
 
 
 @router.get("/scholarships", response_model=list[schemas.ScholarshipResponse])
 def list_scholarships(db: Session = Depends(get_db)):
-    scholarships = db.query(models.Scholarship).filter(
-        models.Scholarship.is_active != False  # noqa: E712
-    ).all()
-    return [_scholarship_to_response(s) for s in scholarships]
+    return get_cached_scholarship_dicts(db)
