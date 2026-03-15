@@ -111,6 +111,7 @@ class StudentProfileResponse(BaseModel):
 class Scholarship(BaseModel):
     title: str
     provider: Optional[str] = None
+    source: Optional[str] = None
     countries: Optional[List[str]] = []
     regions: Optional[List[str]] = []
     min_age: Optional[int] = None
@@ -160,6 +161,7 @@ class ScholarshipResponse(BaseModel):
     id: int
     title: str
     provider: Optional[str] = None
+    source: Optional[str] = None
     countries: Optional[List[str]] = []
     regions: Optional[List[str]] = []
     min_age: Optional[int] = None

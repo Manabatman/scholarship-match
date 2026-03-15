@@ -79,6 +79,7 @@ class Scholarship(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
     provider = Column(String)
+    source = Column(String)  # Data provenance: "philscholar", "sikap", etc.
     link = Column(String)
     description = Column(Text)
     countries = Column(String)  # CSV string (legacy)

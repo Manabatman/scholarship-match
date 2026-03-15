@@ -14,6 +14,9 @@ if errorlevel 1 (
     exit /b 1
 )
 
+REM Free port 5173 if already in use
+call python ..\free_port.py 5173
+
 echo.
 echo Starting development server...
 echo Frontend will be at http://localhost:5173

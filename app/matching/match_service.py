@@ -3,6 +3,9 @@ Match service - orchestrates hard filtering, scoring, and result assembly.
 """
 
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 from app.matching.hard_filters import filter_scholarships
 from app.matching.scoring_port import ScoringEnginePort, ScoringPayload, ScoringResult
 from app.scoring import WeightedDeterministicScorer
@@ -161,7 +164,14 @@ class MatchService:
         Return ranked match results with breakdown and explanation.
         profile and scholarships are dicts (from API/DB).
         """
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("match_service: filter input scholarships=%d", len(scholarships))
+
         candidates = filter_scholarships(profile, scholarships)
+
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("match_service: after hard filters candidates=%d", len(candidates))
+
         results = []
 
         for sch in candidates:
@@ -171,6 +181,10 @@ class MatchService:
             results.append(match_result)
 
         results.sort(key=lambda m: m.get("final_score", 0), reverse=True)
+
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("match_service: scored results=%d", len(results))
+
         return results
 
     def _build_scoring_payload(self, profile: dict, scholarship: dict) -> ScoringPayload:

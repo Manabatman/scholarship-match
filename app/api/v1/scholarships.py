@@ -59,6 +59,7 @@ def _scholarship_to_response(s):
         "id": s.id,
         "title": s.title,
         "provider": s.provider,
+        "source": getattr(s, "source", None),
         "countries": _parse_json(s.countries),
         "regions": regions,
         "min_age": s.min_age,
@@ -111,6 +112,7 @@ def create_scholarship(
     db_scholarship = models.Scholarship(
         title=scholarship.title,
         provider=scholarship.provider,
+        source=scholarship.source,
         countries=",".join(scholarship.countries or []),
         regions=",".join(scholarship.regions or []),
         min_age=scholarship.min_age,
@@ -189,6 +191,7 @@ def update_scholarship(
         raise HTTPException(status_code=404, detail="Scholarship not found")
     s.title = scholarship.title
     s.provider = scholarship.provider
+    s.source = scholarship.source
     s.countries = ",".join(scholarship.countries or [])
     s.regions = ",".join(scholarship.regions or [])
     s.min_age = scholarship.min_age
