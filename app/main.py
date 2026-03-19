@@ -4,7 +4,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from app.api.v1 import auth_routes, match_history, matches, profiles, scholarships
+from app.api.v1 import auth_routes, match_history, matches, profiles, saved_scholarships, scholarship_search, scholarships, suggestions
 from app.config import settings
 from app.db import engine, Base
 from app.limiter import limiter
@@ -41,9 +41,12 @@ app.add_middleware(RequestLoggingMiddleware)
 
 app.include_router(auth_routes.router, prefix="/api/v1")
 app.include_router(profiles.router, prefix="/api/v1")
+app.include_router(scholarship_search.router, prefix="/api/v1")
 app.include_router(scholarships.router, prefix="/api/v1")
 app.include_router(matches.router, prefix="/api/v1")
 app.include_router(match_history.router, prefix="/api/v1")
+app.include_router(saved_scholarships.router, prefix="/api/v1")
+app.include_router(suggestions.router, prefix="/api/v1")
 
 @app.on_event("startup")
 def run_migrations():

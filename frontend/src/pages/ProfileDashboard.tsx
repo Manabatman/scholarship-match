@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import type { MatchRunSummary, StudentProfileResponse } from "../types";
+import { useSavedScholarships } from "../contexts/SavedScholarshipsContext";
+import type { MatchRunSummary, SavedScholarship, StudentProfileResponse } from "../types";
 import { apiFetch } from "../api/client";
 
 export function ProfileDashboard() {
@@ -9,10 +10,13 @@ export function ProfileDashboard() {
   const navigate = useNavigate();
   const [profiles, setProfiles] = useState<StudentProfileResponse[]>([]);
   const [runs, setRuns] = useState<MatchRunSummary[]>([]);
+  const [saved, setSaved] = useState<SavedScholarship[]>([]);
+  const [savedLoading, setSavedLoading] = useState(true);
   const [selectedRuns, setSelectedRuns] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
   const [runLoading, setRunLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { toggleSave } = useSavedScholarships();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -24,6 +28,7 @@ export function ProfileDashboard() {
   useEffect(() => {
     if (!user) return;
     const headers = authHeaders();
+    setSavedLoading(true);
     Promise.all([
       apiFetch("/api/v1/profiles", { headers }).then((r) =>
         r.ok ? r.json() : []
@@ -31,13 +36,21 @@ export function ProfileDashboard() {
       apiFetch("/api/v1/match-runs", { headers }).then((r) =>
         r.ok ? r.json() : []
       ),
+      apiFetch("/api/v1/saved-scholarships", { headers }).then((r) =>
+        r.ok ? r.json() : { saved: [] }
+      ),
     ])
-      .then(([profData, runsData]) => {
+      .then(([profData, runsData, savedData]) => {
         setProfiles(Array.isArray(profData) ? profData : []);
         setRuns(Array.isArray(runsData) ? runsData : []);
+        const savedList = (savedData as { saved?: SavedScholarship[] }).saved;
+        setSaved(Array.isArray(savedList) ? savedList : []);
       })
       .catch(() => setError("Failed to load data"))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        setSavedLoading(false);
+      });
   }, [user, authHeaders]);
 
   const handleRunMatches = async () => {
@@ -228,6 +241,65 @@ export function ProfileDashboard() {
                   >
                     View Results
                   </Link>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Saved Scholarships section */}
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-md dark:border-slate-700 dark:bg-slate-800">
+          <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
+            Saved Scholarships
+          </h3>
+          {savedLoading ? (
+            <div className="mt-4 h-24 animate-pulse rounded bg-slate-100 dark:bg-slate-700" />
+          ) : saved.length === 0 ? (
+            <p className="mt-4 text-slate-600 dark:text-slate-400">
+              No saved scholarships yet.{" "}
+              <Link
+                to="/scholarships/search"
+                className="font-medium text-primary-600 hover:text-primary-700"
+              >
+                Browse scholarships
+              </Link>{" "}
+              to save some.
+            </p>
+          ) : (
+            <div className="mt-4 space-y-3">
+              {saved.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 dark:border-slate-700 p-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      to={`/scholarship/${item.scholarship_id}`}
+                      className="font-medium text-slate-900 dark:text-slate-100 hover:text-primary-600 dark:hover:text-primary-400"
+                    >
+                      {item.scholarship?.title ?? `Scholarship #${item.scholarship_id}`}
+                    </Link>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      {item.scholarship?.provider ?? "—"}
+                      {item.scholarship?.application_deadline && (
+                        <> • Deadline: {new Date(item.scholarship.application_deadline).toLocaleDateString()}</>
+                      )}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await toggleSave(item.scholarship_id);
+                      setSaved((prev) => prev.filter((x) => x.scholarship_id !== item.scholarship_id));
+                    }}
+                    className="shrink-0 rounded p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300"
+                    title="Remove from saved"
+                    aria-label="Remove from saved"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
                 </div>
               ))}
             </div>

@@ -28,6 +28,7 @@ A complete guide for understanding, navigating, and maintaining the Philippine s
 20. [Common Frontend-Backend Failures](#20-common-frontend-backend-failures)
 21. [API Contract Rules](#21-api-contract-rules)
 22. [Debugging Checklist](#22-debugging-checklist)
+23. [Autocomplete System Lessons](#23-autocomplete-system-lessons)
 
 ---
 
@@ -675,6 +676,108 @@ When a frontend request fails (e.g. "Failed to fetch", CORS error, 4xx/5xx):
 | 3 | CORS | Ensure frontend origin (e.g. `http://localhost:5173`) is in `CORS_ORIGINS` in `.env` |
 | 4 | Schema alignment | Compare frontend request body with backend Pydantic schema; check for missing/extra fields |
 | 5 | Backend logs | Check uvicorn console for 500 tracebacks; unhandled exceptions often cause generic 500 with no CORS headers |
+
+---
+
+## 23. Autocomplete System Lessons
+
+Lessons learned from building and fixing the autocomplete fields (school, province, preferred courses) and the region toggle selector.
+
+---
+
+### 23.1 Autocomplete Architecture
+
+**The loop:** User types → frontend debounces → API request → backend returns suggestions → UI shows dropdown.
+
+```
+User types "UP" → (300ms debounce) → GET /api/v1/suggestions/schools?q=UP
+→ Backend searches DB → Returns ["University of the Philippines Diliman", ...]
+→ Frontend setSuggestions(results) → Dropdown renders
+```
+
+**Why debouncing matters:** Without it, every keystroke would trigger an API call. Typing "University" (10 letters) = 10 requests. Debounce waits until the user pauses (e.g. 300ms); only then do we fetch. Fewer requests, less server load, better UX.
+
+**Async fetch flow:** The component uses `useEffect` + `useCallback`. When `debouncedQuery` changes, the effect runs, calls `fetchSuggestions()`, and updates `suggestions` state. React re-renders with the new list.
+
+---
+
+### 23.2 State Management Bug: inputValue vs selectedValue
+
+**The problem:** Many autocomplete bugs come from mixing two different concepts:
+
+| Concept | What it is | Example |
+|---------|------------|---------|
+| **inputValue** | What the user is typing (search query) | "UP" |
+| **selectedValue** | The final chosen item from the list | "University of the Philippines Diliman" |
+
+**Why mixing them causes bugs:** If you use a single `value` for both, React cannot tell the difference between:
+- User typing "University of the Philippines Diliman" (searching)
+- User clicking that suggestion (confirmed selection)
+
+When the user selects, you call `onChange(name, "University of the Philippines Diliman")`. The parent updates state. The debounce sees the new value and thinks "user typed something new" → fetches again → dropdown reopens. The selection appears to "disappear."
+
+**Source of truth:** One piece of state should own each piece of data. If `value` is the source of truth for what's displayed, then selection and typing both write to it. The fix: add an out-of-band signal (e.g. `justSelectedRef`) so the effect knows "this change was a selection, skip the fetch."
+
+---
+
+### 23.3 Controlled Components in React
+
+**What they are:** A controlled input's value comes from React state, not from the DOM. You pass `value={state}` and `onChange` updates that state.
+
+```tsx
+<input value={values.school} onChange={(e) => handleChange("school", e.target.value)} />
+```
+
+**Why React state must control UI:** React's model is "state drives UI." If the input value lives in state, React can:
+- Re-render with the correct value when state changes
+- Validate and transform input
+- Sync with other parts of the app (e.g. form submission)
+
+**Uncontrolled** inputs use `defaultValue` and read from the DOM via refs. We use controlled inputs in our forms so the parent (`ProfileForm`) owns the data and can validate, persist drafts, and submit.
+
+---
+
+### 23.4 Memoization
+
+**What it is (simple terms):** Storing the result of a computation so you don't repeat it. Like a cache: "I already computed this; here's the answer."
+
+**In React:**
+- `useCallback(fn, deps)` — returns the same function reference until deps change. Avoids recreating the function every render.
+- `useMemo(() => compute(), deps)` — returns the same computed value until deps change.
+
+**Why it matters for autocomplete:** If `fetchSuggestions` is recreated every render (e.g. because `extraParams` is a new object `{}` each time), then `useEffect` depends on it and runs every render → infinite fetch loop. Fix: use `useRef` for `extraParams` so `fetchSuggestions` stays stable; only `endpoint` (a string) is in the dependency array.
+
+**Connection to debounce:** Debounce is a form of memoization — we "remember" the latest input and only act after a delay. Caching API results (e.g. "don't fetch 'UP' again if we already have results") is another.
+
+**Data Structures connection:** Caches are often implemented with hash maps (O(1) lookup). Memoization trades memory (storing results) for speed (avoiding recomputation).
+
+---
+
+### 23.5 UX Design: Autocomplete vs Toggle List
+
+| Use case | Component | When |
+|----------|-----------|------|
+| **Autocomplete** | Type to search, API returns suggestions | Large datasets (schools, courses, provinces). User may not know exact name. |
+| **Toggle / Select** | Click to open, pick from fixed list | Small fixed sets (17 regions, gender, education level). No search needed. |
+
+**Region field:** 17 options, never change at runtime. Autocomplete added API calls, debounce delay, and allowed invalid entries ("Metro Manila"). A static `<select>` is instant, prevents invalid input, and matches other dropdowns (education_level, school_type).
+
+**Why this matters:** Match the UI to the data. Don't add complexity (API, debounce) when a simple dropdown is faster and safer.
+
+---
+
+### 23.6 Debugging Workflow: Frontend → Backend
+
+When autocomplete or API calls misbehave:
+
+| Step | Action |
+|------|--------|
+| 1. **Trace frontend → backend** | Find where the request is made (e.g. `AutocompleteInput` → `apiFetch`). Check what URL and params are sent. |
+| 2. **Check Network tab** | DevTools → Network. Filter by Fetch/XHR. See request URL, status, response body. Confirm the backend received what you expect. |
+| 3. **Isolate backend** | Call the endpoint directly (e.g. `curl "http://localhost:8000/api/v1/suggestions/schools?q=UP"`). If it works, the bug is frontend (params, parsing, state). |
+| 4. **Validate response format** | Ensure the backend returns the shape the frontend expects (e.g. `{ suggestions: string[] }`). Mismatch → parsing errors or empty UI. |
+
+**Common causes:** Wrong URL, missing query param, CORS, 429 rate limit, unstable `useEffect` deps causing infinite loops.
 
 ---
 

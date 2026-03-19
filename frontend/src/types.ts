@@ -135,3 +135,26 @@ export interface ScholarshipInfo {
   application_deadline?: string | null;
   is_active?: boolean;
 }
+
+export interface ScholarshipSearchResponse {
+  results: ScholarshipInfo[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+}
+
+export interface ScholarshipSearchFilters {
+  region?: string;
+  field?: string;
+  education_level?: string;
+  provider?: string;
+  max_income?: number;
+}
+
+export interface SavedScholarship {
+  id: number;
+  scholarship_id: number;
+  created_at: string;
+  scholarship?: ScholarshipInfo;
+}

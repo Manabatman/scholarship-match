@@ -157,3 +157,14 @@ class MatchResult(Base):
     explanation = Column(Text, nullable=True)  # JSON-encoded list
     breakdown = Column(Text, nullable=True)  # JSON-encoded dict
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
+
+
+class SavedScholarship(Base):
+    """User-bookmarked scholarship."""
+
+    __tablename__ = "saved_scholarships"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    scholarship_id = Column(Integer, ForeignKey("scholarships.id"), nullable=False, index=True)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)

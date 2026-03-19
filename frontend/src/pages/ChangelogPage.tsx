@@ -79,6 +79,20 @@ const CHANGELOG: ChangelogEntry[] = [
     title: "Application timing",
     description: "Shows 'Opens in X days' when application is not yet open.",
   },
+  {
+    version: "1.2.0",
+    date: "2025-03",
+    type: "feature",
+    title: "Scholarship search",
+    description: "Browse scholarships with search bar, filters (region, field, income, education level, provider), and pagination. Jobstreet-style detail panel opens on card click.",
+  },
+  {
+    version: "1.2.0",
+    date: "2025-03",
+    type: "feature",
+    title: "Save scholarships",
+    description: "Bookmark scholarships with a heart icon. Saved scholarships appear in your dashboard. Requires login.",
+  },
 ];
 
 function getTypeBadgeClass(type: string): string {

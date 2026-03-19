@@ -19,7 +19,9 @@ import { RegisterPage } from "./pages/RegisterPage";
 import { ProfileDashboard } from "./pages/ProfileDashboard";
 import { MatchComparisonPage } from "./pages/MatchComparisonPage";
 import { ScholarshipList } from "./components/ScholarshipList";
+import { ScholarshipSearchPage } from "./pages/ScholarshipSearchPage";
 import { Footer } from "./components/Footer";
+import { SavedScholarshipsProvider } from "./contexts/SavedScholarshipsContext";
 import { apiFetch } from "./api/client";
 
 function profileToInitialValues(p: { id?: number; [key: string]: unknown }): Record<string, string> {
@@ -193,6 +195,7 @@ function AppRoutes() {
       <Route path="/dashboard" element={<ProfileDashboard />} />
       <Route path="/match-compare" element={<MatchComparisonPage />} />
       <Route path="/scholarship/:id" element={<ScholarshipDetailPage />} />
+      <Route path="/scholarships/search" element={<ScholarshipSearchPage />} />
       <Route path="/scholarships" element={<ScholarshipList />} />
       <Route path="/about" element={<AboutPage />} />
       <Route path="/terms" element={<TermsPage />} />
@@ -206,13 +209,15 @@ function AppRoutes() {
 
 function AppLayout() {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
-      <Navbar />
-      <main className="bg-slate-50 dark:bg-slate-900">
-        <AppRoutes />
-      </main>
-      <Footer />
-    </div>
+    <SavedScholarshipsProvider>
+      <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+        <Navbar />
+        <main className="bg-slate-50 dark:bg-slate-900">
+          <AppRoutes />
+        </main>
+        <Footer />
+      </div>
+    </SavedScholarshipsProvider>
   );
 }
 

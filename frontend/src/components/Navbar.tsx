@@ -64,9 +64,9 @@ export function Navbar() {
             </Link>
           )}
           <Link
-            to="/scholarships"
+            to="/scholarships/search"
             className={`text-sm transition focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded ${
-              location.pathname === "/scholarships"
+              location.pathname.startsWith("/scholarships")
                 ? "font-medium text-primary-600 dark:text-primary-400"
                 : "text-slate-600 hover:text-primary-600 dark:text-slate-400 dark:hover:text-primary-400"
             }`}

@@ -1,4 +1,5 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { AutocompleteInput } from "./AutocompleteInput";
 import { NeedsCategoryAccordion } from "./NeedsCategoryAccordion";
 import { SelectedChips } from "./SelectedChips";
 import { NEEDS_CATEGORIES, EQUITY_GROUPS, INCOME_BRACKETS } from "../constants/needsCategories";
@@ -429,18 +430,15 @@ export function ProfileForm({ onSubmit, loading, error, initialValues }: Profile
                     />
                   </div>
                   <div>
-                    <label htmlFor="school" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                      School
-                    </label>
-                    <input
+                    <AutocompleteInput
                       id="school"
                       name="school"
-                      type="text"
-                      required
+                      label="School"
                       value={values.school}
-                      onChange={(e) => handleChange("school", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      onChange={handleChange}
+                      endpoint="/api/v1/suggestions/schools"
                       placeholder="Current or target school"
+                      required
                     />
                   </div>
                   <div>
@@ -465,16 +463,13 @@ export function ProfileForm({ onSubmit, loading, error, initialValues }: Profile
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="target_school" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                      Target university (if applicable)
-                    </label>
-                    <input
+                    <AutocompleteInput
                       id="target_school"
                       name="target_school"
-                      type="text"
+                      label="Target university (if applicable)"
                       value={values.target_school}
-                      onChange={(e) => handleChange("target_school", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      onChange={handleChange}
+                      endpoint="/api/v1/suggestions/schools"
                       placeholder="e.g. UP Diliman"
                     />
                   </div>
@@ -541,17 +536,15 @@ export function ProfileForm({ onSubmit, loading, error, initialValues }: Profile
                     )}
                   </div>
                   <div>
-                    <label htmlFor="province" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                      Province
-                    </label>
-                    <input
+                    <AutocompleteInput
                       id="province"
                       name="province"
-                      type="text"
+                      label="Province"
                       value={values.province}
-                      onChange={(e) => handleChange("province", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                      onChange={handleChange}
+                      endpoint="/api/v1/suggestions/provinces"
                       placeholder="e.g. Metro Manila"
+                      extraParams={values.region ? { region: values.region } : {}}
                     />
                   </div>
                   <div>
@@ -602,14 +595,13 @@ export function ProfileForm({ onSubmit, loading, error, initialValues }: Profile
                     </p>
                     <div className="mt-2 space-y-2">
                       {[1, 2, 3].map((i) => (
-                        <input
+                        <AutocompleteInput
                           key={i}
                           id={`preferred_course_${i}`}
                           name={`preferred_course_${i}`}
-                          type="text"
                           value={values[`preferred_course_${i}` as keyof typeof values] ?? ""}
-                          onChange={(e) => handleChange(`preferred_course_${i}`, e.target.value)}
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                          onChange={handleChange}
+                          endpoint="/api/v1/suggestions/courses"
                           placeholder={i === 1 ? "e.g. BS Computer Science" : `Course ${i} (optional)`}
                         />
                       ))}

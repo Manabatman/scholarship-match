@@ -259,3 +259,39 @@ class MatchComparisonResponse(BaseModel):
 
 class CreateMatchRunRequest(BaseModel):
     profile_id: int
+
+
+# === Scholarship Search ===
+class ScholarshipSearchResponse(BaseModel):
+    results: List[ScholarshipResponse] = []
+    total: int = 0
+    page: int = 1
+    limit: int = 20
+    total_pages: int = 0
+
+
+class ScholarshipFilterOptions(BaseModel):
+    providers: List[str] = []
+    education_levels: List[str] = []
+    regions: List[str] = []
+    fields_of_study: List[str] = []
+
+
+# === Saved Scholarships ===
+class SaveScholarshipRequest(BaseModel):
+    scholarship_id: int
+
+
+class SavedScholarshipResponse(BaseModel):
+    id: int
+    scholarship_id: int
+    created_at: datetime
+    scholarship: Optional[ScholarshipResponse] = None
+
+    class Config:
+        from_attributes = True
+
+
+class SavedScholarshipListResponse(BaseModel):
+    saved: List[SavedScholarshipResponse] = []
+    total: int = 0

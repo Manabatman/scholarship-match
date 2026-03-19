@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { ScholarshipInfo } from "../types";
 import { apiFetch } from "../api/client";
+import { BookmarkButton } from "./BookmarkButton";
 
 function ScholarshipBrowseCard({ s }: { s: ScholarshipInfo }) {
   const link = s.link && s.link.trim() ? s.link : "#";
@@ -14,14 +15,17 @@ function ScholarshipBrowseCard({ s }: { s: ScholarshipInfo }) {
       aria-labelledby={`scholarship-title-${s.id}`}
     >
       <div className="flex flex-1 flex-col">
-        <div className="min-w-0 flex-1">
-          <h3
-            id={`scholarship-title-${s.id}`}
-            className="text-lg font-semibold text-slate-900 dark:text-slate-100"
-          >
-            {s.title}
-          </h3>
-          <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{s.provider}</p>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <h3
+              id={`scholarship-title-${s.id}`}
+              className="text-lg font-semibold text-slate-900 dark:text-slate-100"
+            >
+              {s.title}
+            </h3>
+            <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{s.provider}</p>
+          </div>
+          <BookmarkButton scholarshipId={s.id} />
         </div>
 
         {s.level && (
@@ -130,13 +134,22 @@ export function ScholarshipList(_props?: ScholarshipListProps) {
               {scholarships.length}
             </span>
           </h2>
-          <Link
-            to="/"
-            className="w-fit rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white shadow-md transition hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-            aria-label="Build your profile to get personalized matches"
-          >
-            Build Profile for Matches
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              to="/scholarships/search"
+              className="w-fit rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-6 py-3 font-semibold text-slate-700 dark:text-slate-300 shadow-md transition hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+              aria-label="Search scholarships with filters"
+            >
+              Search Scholarships
+            </Link>
+            <Link
+              to="/"
+              className="w-fit rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white shadow-md transition hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+              aria-label="Build your profile to get personalized matches"
+            >
+              Build Profile for Matches
+            </Link>
+          </div>
         </div>
 
         {loading && (

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { MatchResult } from "../types";
+import { BookmarkButton } from "./BookmarkButton";
 
 function getScoreBadgeClasses(score: number): string {
   if (score >= 90) return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
@@ -124,6 +125,7 @@ export function ScholarshipCard({ match }: ScholarshipCardProps) {
             <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{match.provider}</p>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1">
+            <BookmarkButton scholarshipId={match.id} />
             <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${scoreBadgeClasses}`}>
               {Math.round(score)}% match
             </span>
