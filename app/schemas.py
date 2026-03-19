@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from pydantic import BaseModel, field_validator
 from typing import List, Optional, Any
 
@@ -225,3 +225,37 @@ class MatchResponse(BaseModel):
     benefit_total_value: Optional[int] = None
     application_deadline: Optional[str] = None
     required_documents: Optional[List[str]] = []
+
+
+# === Match History ===
+class MatchRunSummary(BaseModel):
+    id: int
+    profile_id: int
+    created_at: datetime
+    result_count: int
+
+
+class MatchRunDetail(BaseModel):
+    id: int
+    profile_id: int
+    created_at: datetime
+    results: List[MatchResponse]
+
+
+class MatchComparisonItem(BaseModel):
+    scholarship_id: int
+    title: str
+    provider: Optional[str] = None
+    score_a: Optional[float] = None
+    score_b: Optional[float] = None
+    score_diff: Optional[float] = None
+
+
+class MatchComparisonResponse(BaseModel):
+    run_a: MatchRunSummary
+    run_b: MatchRunSummary
+    items: List[MatchComparisonItem]
+
+
+class CreateMatchRunRequest(BaseModel):
+    profile_id: int

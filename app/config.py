@@ -34,7 +34,7 @@ class Settings(BaseSettings):
         validation_alias="SECRET_KEY",
     )
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60
+    access_token_expire_minutes: int = 1440  # 24 hours
 
     # Set AUTH_DISABLED=true for local dev (bypasses JWT on protected endpoints)
     auth_disabled: bool = Field(

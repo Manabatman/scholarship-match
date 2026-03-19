@@ -1,19 +1,45 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import type { MatchResult } from "../types";
 import { ScholarshipCard } from "../components/ScholarshipCard";
-
-const API_BASE_URL =
-  (import.meta as unknown as { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL ?? "http://localhost:8000";
+import { useAuth } from "../contexts/AuthContext";
+import { apiFetch } from "../api/client";
 
 export function MatchResultsPage() {
   const { profileId } = useParams<{ profileId: string }>();
+  const [searchParams] = useSearchParams();
+  const runId = searchParams.get("run");
+  const { authHeaders } = useAuth();
   const navigate = useNavigate();
   const [matches, setMatches] = useState<MatchResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (runId) {
+      let cancelled = false;
+      setLoading(true);
+      setError(null);
+      apiFetch(`/api/v1/match-runs/${runId}`, {
+        headers: authHeaders(),
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("Unable to fetch match run");
+          return res.json();
+        })
+        .then((data) => {
+          if (!cancelled) setMatches(data.results ?? []);
+        })
+        .catch((err) => {
+          if (!cancelled) setError(err instanceof Error ? err.message : "Something went wrong");
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
     if (!profileId) {
       setLoading(false);
       setError("Invalid profile");
@@ -22,7 +48,7 @@ export function MatchResultsPage() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetch(`${API_BASE_URL}/api/v1/matches/${profileId}`)
+    apiFetch(`/api/v1/matches/${profileId}`)
       .then((res) => {
         if (!res.ok) throw new Error("Unable to fetch matches");
         return res.json();
@@ -39,7 +65,7 @@ export function MatchResultsPage() {
     return () => {
       cancelled = true;
     };
-  }, [profileId]);
+  }, [profileId, runId, authHeaders]);
 
   const handleReset = () => navigate("/");
 

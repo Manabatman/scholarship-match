@@ -82,6 +82,40 @@ export interface MatchResult {
   required_documents?: string[];
 }
 
+export interface MatchRunSummary {
+  id: number;
+  profile_id: number;
+  created_at: string;
+  result_count: number;
+}
+
+export interface MatchComparisonItem {
+  scholarship_id: number;
+  title: string;
+  provider?: string | null;
+  score_a?: number | null;
+  score_b?: number | null;
+  score_diff?: number | null;
+}
+
+export interface MatchComparisonResponse {
+  run_a: MatchRunSummary;
+  run_b: MatchRunSummary;
+  items: MatchComparisonItem[];
+}
+
+export interface StudentProfileResponse {
+  id: number;
+  full_name: string;
+  email: string;
+  age?: number | null;
+  region?: string | null;
+  school?: string | null;
+  needs?: string[];
+  education_level?: string | null;
+  [key: string]: unknown;
+}
+
 export interface ScholarshipInfo {
   id: number;
   title: string;

@@ -1,13 +1,16 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { NeedsCategoryAccordion } from "./NeedsCategoryAccordion";
 import { SelectedChips } from "./SelectedChips";
 import { NEEDS_CATEGORIES, EQUITY_GROUPS, INCOME_BRACKETS } from "../constants/needsCategories";
 import { PHILIPPINE_REGIONS } from "../constants/regions";
 
+const PROFILE_DRAFT_KEY = "iskonnect_profile_draft";
+
 interface ProfileFormProps {
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   loading: boolean;
   error: string | null;
+  initialValues?: Record<string, string>;
 }
 
 const STEPS = 5;
@@ -68,47 +71,84 @@ const TIER2_FIELDS: { key: string; label: string }[] = [
   { key: "household_income_annual", label: "Household income or income bracket" },
 ];
 
-export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
+const DEFAULT_VALUES: Record<string, string> = {
+  full_name: "",
+  email: "",
+  age: "",
+  gender: "",
+  region: "",
+  province: "",
+  city_municipality: "",
+  barangay: "",
+  school: "",
+  school_type: "",
+  target_school: "",
+  education_level: "",
+  current_academic_stage: "",
+  target_academic_year: "",
+  field_of_study_broad: "",
+  field_of_study_specific: "",
+  preferred_course_1: "",
+  preferred_course_2: "",
+  preferred_course_3: "",
+  gwa_raw: "",
+  gwa_scale: "",
+  needs: "",
+  extracurriculars: "",
+  awards: "",
+  household_income_annual: "",
+  income_bracket: "",
+  is_underprivileged: "",
+  is_pwd: "",
+  is_indigenous_people: "",
+  is_solo_parent_dependent: "",
+  is_ofw_dependent: "",
+  is_farmer_fisher_dependent: "",
+  is_4ps_listahanan: "",
+  parent_occupation: "",
+};
+
+export function ProfileForm({ onSubmit, loading, error, initialValues }: ProfileFormProps) {
   const [step, setStep] = useState(1);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [showRecommendedDialog, setShowRecommendedDialog] = useState(false);
   const [pendingSubmit, setPendingSubmit] = useState<FormEvent<HTMLFormElement> | null>(null);
-  const [values, setValues] = useState<Record<string, string>>({
-    full_name: "",
-    email: "",
-    age: "",
-    gender: "",
-    region: "",
-    province: "",
-    city_municipality: "",
-    barangay: "",
-    school: "",
-    school_type: "",
-    target_school: "",
-    education_level: "",
-    current_academic_stage: "",
-    target_academic_year: "",
-    field_of_study_broad: "",
-    field_of_study_specific: "",
-    preferred_course_1: "",
-    preferred_course_2: "",
-    preferred_course_3: "",
-    gwa_raw: "",
-    gwa_scale: "",
-    needs: "",
-    extracurriculars: "",
-    awards: "",
-    household_income_annual: "",
-    income_bracket: "",
-    is_underprivileged: "",
-    is_pwd: "",
-    is_indigenous_people: "",
-    is_solo_parent_dependent: "",
-    is_ofw_dependent: "",
-    is_farmer_fisher_dependent: "",
-    is_4ps_listahanan: "",
-    parent_occupation: "",
+  const [values, setValues] = useState<Record<string, string>>(() => {
+    if (initialValues && Object.keys(initialValues).length > 0) {
+      return { ...DEFAULT_VALUES, ...initialValues };
+    }
+    try {
+      const stored = localStorage.getItem(PROFILE_DRAFT_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as Record<string, string>;
+        return { ...DEFAULT_VALUES, ...parsed };
+      }
+    } catch {
+      // ignore parse errors
+    }
+    return { ...DEFAULT_VALUES };
   });
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (initialValues && Object.keys(initialValues).length > 0) {
+      setValues((prev) => ({ ...prev, ...initialValues }));
+    }
+  }, [initialValues]);
+
+  useEffect(() => {
+    const saveDraft = () => {
+      try {
+        localStorage.setItem(PROFILE_DRAFT_KEY, JSON.stringify(values));
+      } catch {
+        // ignore quota errors
+      }
+    };
+    saveTimeoutRef.current = setTimeout(saveDraft, 400);
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, [values]);
 
   const selectedNeeds = (values.needs ?? "")
     .split(",")
@@ -122,9 +162,9 @@ export function ProfileForm({ onSubmit, loading, error }: ProfileFormProps) {
     setValues((prev) => ({ ...prev, needs: next.join(", ") }));
   };
 
-  const handleChange = (name: string, value: string) => {
+  const handleChange = useCallback((name: string, value: string) => {
     setValues((prev) => ({ ...prev, [name]: value }));
-  };
+  }, []);
 
   const toggleEquity = (flagName: string) => {
     const current = values[flagName] === "on";

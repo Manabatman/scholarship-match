@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-
-const API_BASE_URL =
-  (import.meta as unknown as { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL ?? "http://localhost:8000";
+import { apiFetch } from "../api/client";
 
 const DOCUMENT_LABELS: Record<string, string> = {
   ITR: "Income Tax Return",
@@ -74,7 +72,7 @@ export function ScholarshipDetailPage() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetch(`${API_BASE_URL}/api/v1/scholarships/${id}`)
+    apiFetch(`/api/v1/scholarships/${id}`)
       .then((res) => {
         if (!res.ok) throw new Error("Scholarship not found");
         return res.json();

@@ -1,6 +1,7 @@
-import { FormEvent, useCallback, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import type { StudentProfile } from "./types";
 import { Navbar } from "./components/Navbar";
 import { HeroSection } from "./components/HeroSection";
@@ -13,16 +14,77 @@ import { PrivacyPage } from "./pages/PrivacyPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { ChangelogPage } from "./pages/ChangelogPage";
 import { AdminPage } from "./pages/AdminPage";
+import { LoginPage } from "./pages/LoginPage";
+import { RegisterPage } from "./pages/RegisterPage";
+import { ProfileDashboard } from "./pages/ProfileDashboard";
+import { MatchComparisonPage } from "./pages/MatchComparisonPage";
 import { ScholarshipList } from "./components/ScholarshipList";
 import { Footer } from "./components/Footer";
+import { apiFetch } from "./api/client";
 
-const API_BASE_URL =
-  (import.meta as unknown as { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL ?? "http://localhost:8000";
+function profileToInitialValues(p: { id?: number; [key: string]: unknown }): Record<string, string> {
+  const pc = (p.preferred_courses as string[]) ?? [];
+  return {
+    full_name: String(p.full_name ?? ""),
+    email: String(p.email ?? ""),
+    age: p.age != null ? String(p.age) : "",
+    gender: String(p.gender ?? ""),
+    region: String(p.region ?? ""),
+    province: String(p.province ?? ""),
+    city_municipality: String(p.city_municipality ?? ""),
+    barangay: String(p.barangay ?? ""),
+    school: String(p.school ?? ""),
+    school_type: String(p.school_type ?? ""),
+    target_school: String(p.target_school ?? ""),
+    education_level: String(p.education_level ?? ""),
+    current_academic_stage: String(p.current_academic_stage ?? ""),
+    target_academic_year: String(p.target_academic_year ?? ""),
+    field_of_study_broad: String(p.field_of_study_broad ?? ""),
+    field_of_study_specific: String(p.field_of_study_specific ?? ""),
+    preferred_course_1: pc[0] ?? "",
+    preferred_course_2: pc[1] ?? "",
+    preferred_course_3: pc[2] ?? "",
+    gwa_raw: String(p.gwa_raw ?? ""),
+    gwa_scale: String(p.gwa_scale ?? ""),
+    needs: Array.isArray(p.needs) ? p.needs.join(", ") : "",
+    extracurriculars: Array.isArray(p.extracurriculars) ? p.extracurriculars.join(", ") : "",
+    awards: Array.isArray(p.awards) ? p.awards.join(", ") : "",
+    household_income_annual: p.household_income_annual != null ? String(p.household_income_annual) : "",
+    income_bracket: String(p.income_bracket ?? ""),
+    parent_occupation: String(p.parent_occupation ?? ""),
+    is_underprivileged: (p as { is_underprivileged?: boolean }).is_underprivileged ? "on" : "",
+    is_pwd: (p as { is_pwd?: boolean }).is_pwd ? "on" : "",
+    is_indigenous_people: (p as { is_indigenous_people?: boolean }).is_indigenous_people ? "on" : "",
+    is_solo_parent_dependent: (p as { is_solo_parent_dependent?: boolean }).is_solo_parent_dependent ? "on" : "",
+    is_ofw_dependent: (p as { is_ofw_dependent?: boolean }).is_ofw_dependent ? "on" : "",
+    is_farmer_fisher_dependent: (p as { is_farmer_fisher_dependent?: boolean }).is_farmer_fisher_dependent ? "on" : "",
+    is_4ps_listahanan: (p as { is_4ps_listahanan?: boolean }).is_4ps_listahanan ? "on" : "",
+  };
+}
 
 function ProfilePage() {
   const navigate = useNavigate();
+  const { user, authHeaders } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [initialValues, setInitialValues] = useState<Record<string, string> | undefined>();
+
+  useEffect(() => {
+    if (!user) {
+      setInitialValues(undefined);
+      return;
+    }
+    apiFetch("/api/v1/profiles", { headers: authHeaders() })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((arr) => {
+        if (Array.isArray(arr) && arr.length > 0) {
+          setInitialValues(profileToInitialValues(arr[0]));
+        } else {
+          setInitialValues(undefined);
+        }
+      })
+      .catch(() => setInitialValues(undefined));
+  }, [user, authHeaders]);
 
   const handleSubmitProfile = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -83,9 +145,12 @@ function ProfilePage() {
       };
 
       try {
-        const profileRes = await fetch(`${API_BASE_URL}/api/v1/profiles`, {
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        const authHdrs = authHeaders();
+        Object.assign(headers, authHdrs);
+        const profileRes = await apiFetch("/api/v1/profiles", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify(profile),
         });
 
@@ -95,6 +160,7 @@ function ProfilePage() {
         }
 
         const created = await profileRes.json();
+        localStorage.removeItem("iskonnect_profile_draft");
         navigate(`/match/${created.id}`);
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : "Something went wrong");
@@ -102,7 +168,7 @@ function ProfilePage() {
         setLoading(false);
       }
     },
-    [navigate]
+    [navigate, authHeaders]
   );
 
   const scrollToProfile = useCallback(() => {
@@ -122,6 +188,10 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<ProfilePage />} />
       <Route path="/match/:profileId" element={<MatchResultsPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/dashboard" element={<ProfileDashboard />} />
+      <Route path="/match-compare" element={<MatchComparisonPage />} />
       <Route path="/scholarship/:id" element={<ScholarshipDetailPage />} />
       <Route path="/scholarships" element={<ScholarshipList />} />
       <Route path="/about" element={<AboutPage />} />
@@ -150,7 +220,9 @@ export default function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
-        <AppLayout />
+        <AuthProvider>
+          <AppLayout />
+        </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>
   );

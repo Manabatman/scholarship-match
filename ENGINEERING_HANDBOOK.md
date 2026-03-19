@@ -25,6 +25,9 @@ A complete guide for understanding, navigating, and maintaining the Philippine s
 17. [Concepts Guide](#17-concepts-guide)
 18. [Known Bugs](#18-known-bugs)
 19. [Future Improvements](#19-future-improvements)
+20. [Common Frontend-Backend Failures](#20-common-frontend-backend-failures)
+21. [API Contract Rules](#21-api-contract-rules)
+22. [Debugging Checklist](#22-debugging-checklist)
 
 ---
 
@@ -468,6 +471,8 @@ Frontend: http://localhost:5173
 
 ## 14. Debugging Guide
 
+For a step-by-step checklist when frontend requests fail, see [Section 22: Debugging Checklist](#22-debugging-checklist).
+
 ### Symptom → Diagnosis
 
 | Symptom | Likely Cause | Fix |
@@ -635,6 +640,41 @@ flowchart LR
 - Match result caching per profile (short TTL)
 - Debounce on search/filter inputs
 - Connection pooling config for PostgreSQL at scale
+
+---
+
+## 20. Common Frontend-Backend Failures
+
+### Registration "Failed to Fetch" (March 2025)
+
+| Item | Detail |
+|------|--------|
+| **Root cause** | bcrypt 5.0.0 / passlib 1.7.4 incompatibility. `hash_password()` threw `ValueError` during backend init of bcrypt backend. Unhandled exception → 500 Internal Server Error. ServerErrorMiddleware handled 500 *above* CORSMiddleware, so response had no CORS headers. Browser blocked the response → `TypeError: Failed to fetch`. |
+| **Symptoms** | Registration form shows "Failed to fetch"; health endpoint returns 200; register endpoint returns 500 with no CORS headers. |
+| **Fix applied** | Replaced passlib with direct bcrypt calls in `app/auth.py` (`hash_password`, `verify_password`). Updated `requirements.txt`: `passlib[bcrypt]==1.7.4` → `bcrypt==5.0.0`. |
+| **Prevention** | Pin transitive dependencies explicitly in `requirements.txt`. Avoid unmaintained libraries (passlib); prefer direct bcrypt when possible. |
+
+---
+
+## 21. API Contract Rules
+
+- **Never change request/response without compatibility** — Add new fields additively; avoid removing or renaming fields. Use optional fields for new data.
+- **Always validate frontend/backend sync** — After schema changes, verify frontend payload matches backend Pydantic models. Run both locally and test the affected flow.
+- **Version the API** — Use `/api/v1/` prefix; introduce v2 for breaking changes instead of modifying v1 in place.
+
+---
+
+## 22. Debugging Checklist
+
+When a frontend request fails (e.g. "Failed to fetch", CORS error, 4xx/5xx):
+
+| Step | Check | Command / Action |
+|------|-------|-------------------|
+| 1 | Backend running | `curl http://localhost:8000/health` or `Invoke-WebRequest http://localhost:8000/health` |
+| 2 | Endpoint URL correct | Verify `VITE_API_BASE_URL` in `frontend/.env`; frontend must call `{base}/api/v1/...` |
+| 3 | CORS | Ensure frontend origin (e.g. `http://localhost:5173`) is in `CORS_ORIGINS` in `.env` |
+| 4 | Schema alignment | Compare frontend request body with backend Pydantic schema; check for missing/extra fields |
+| 5 | Backend logs | Check uvicorn console for 500 tracebacks; unhandled exceptions often cause generic 500 with no CORS headers |
 
 ---
 

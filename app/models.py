@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Text, Float, Boolean, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, Float, Boolean, Date, DateTime, ForeignKey
+from sqlalchemy.sql import func
 from app.db import Base
 
 
@@ -10,6 +11,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, nullable=False, unique=True)
     password_hash = Column(String, nullable=False)
+    role = Column(String, nullable=False, server_default="student")  # "student" | "admin"
 
 
 class Student(Base):
@@ -129,3 +131,29 @@ class Scholarship(Base):
     is_active = Column(Boolean, default=True)
     level = Column(String)  # Legacy: High School, College, TVET, Graduate
     needs_tags = Column(Text)  # JSON-encoded list (legacy)
+
+
+class MatchRun(Base):
+    """A single match run for a user's profile."""
+
+    __tablename__ = "match_runs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    profile_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+
+
+class MatchResult(Base):
+    """One scholarship result within a match run."""
+
+    __tablename__ = "match_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    run_id = Column(Integer, ForeignKey("match_runs.id"), nullable=False, index=True)
+    scholarship_id = Column(Integer, ForeignKey("scholarships.id"), nullable=False, index=True)
+    score = Column(Float, nullable=False)
+    final_score = Column(Float, nullable=True)
+    explanation = Column(Text, nullable=True)  # JSON-encoded list
+    breakdown = Column(Text, nullable=True)  # JSON-encoded dict
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)

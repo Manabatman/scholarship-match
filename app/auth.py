@@ -5,31 +5,30 @@ Set AUTH_DISABLED=true for local development to bypass auth.
 from datetime import datetime, timedelta
 from typing import Annotated
 
+import bcrypt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import get_db
 from app import models
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer(auto_error=False)
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
-def create_access_token(user_id: int) -> str:
+def create_access_token(user_id: int, role: str = "student") -> str:
     expire = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
-    payload = {"sub": str(user_id), "exp": expire}
+    payload = {"sub": str(user_id), "role": role, "exp": expire}
     return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
 
 
@@ -74,6 +73,48 @@ def get_current_user_id(
             headers={"WWW-Authenticate": "Bearer"},
         )
     return user_id
+
+
+def get_current_user(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
+    db: Session = Depends(get_db),
+) -> models.User | None:
+    """
+    Dependency: return full User object if authenticated.
+    Returns None when no valid token. Respects AUTH_DISABLED for optional auth.
+    """
+    if not credentials:
+        return None
+    user_id = decode_token(credentials.credentials)
+    if user_id is None:
+        return None
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    return user
+
+
+def require_admin(
+    user: Annotated[models.User | None, Depends(get_current_user)],
+) -> models.User | None:
+    """
+    Dependency: require admin role for protected endpoints.
+    When AUTH_DISABLED=true, bypasses check (returns None, allows request).
+    When AUTH_DISABLED=false, raises 401 if not authenticated, 403 if not admin.
+    """
+    if settings.auth_disabled:
+        return None
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    role = getattr(user, "role", "student")
+    if role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin role required",
+        )
+    return user
 
 
 def require_profile_owner(

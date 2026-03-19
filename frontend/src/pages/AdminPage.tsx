@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { ScholarshipInfo } from "../types";
-
-const API_BASE_URL =
-  (import.meta as unknown as { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL ?? "http://localhost:8000";
+import { apiFetch } from "../api/client";
 
 function getAuthHeaders(): HeadersInit {
   const token = localStorage.getItem("iskonnect_token");
@@ -19,7 +17,7 @@ export function AdminPage() {
 
   const fetchScholarships = () => {
     setLoading(true);
-    fetch(`${API_BASE_URL}/api/v1/scholarships?include_inactive=true`, {
+    apiFetch("/api/v1/scholarships?include_inactive=true", {
       headers: getAuthHeaders(),
     })
       .then((res) => {
@@ -37,7 +35,7 @@ export function AdminPage() {
 
   const handleDelete = (id: number) => {
     if (!confirm("Deactivate this scholarship?")) return;
-    fetch(`${API_BASE_URL}/api/v1/scholarships/${id}`, {
+    apiFetch(`/api/v1/scholarships/${id}`, {
       method: "DELETE",
       headers: getAuthHeaders(),
     })

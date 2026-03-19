@@ -1,13 +1,19 @@
-from fastapi import APIRouter, HTTPException, Depends, Request
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
 import json
+import logging
 from datetime import date
 from typing import Annotated
 
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
 from app import models, schemas
 from app.auth import get_current_user_id
+from app.config import settings
 from app.db import get_db
+from app.utils.sanitize import strip_tags
+
+logger = logging.getLogger(__name__)
 from app.limiter import limiter
 from app.taxonomy.income_brackets import get_income_bracket
 from app.taxonomy.gwa_normalizer import normalize_gwa
@@ -83,7 +89,7 @@ def _profile_to_db_dict(profile: schemas.StudentProfile) -> dict:
         income_bracket = get_income_bracket(profile.household_income_annual)
 
     return {
-        "full_name": profile.full_name,
+        "full_name": strip_tags(profile.full_name) or profile.full_name,
         "email": profile.email,
         "age": profile.age,
         "region": profile.region,
@@ -144,10 +150,15 @@ def create_profile(
     db: Session = Depends(get_db),
     user_id: Annotated[int | None, Depends(get_current_user_id)] = None,
 ):
-    """Create or update profile. Requires auth in production."""
+    """Create or update profile. Requires auth when AUTH_DISABLED=false."""
+    if not settings.auth_disabled and user_id is None:
+        logger.warning("profile_create_denied email=%s reason=not_authenticated", profile.email)
+        raise HTTPException(status_code=401, detail="Not authenticated")
     data = _profile_to_db_dict(profile)
     if user_id is not None:
         data["user_id"] = user_id
+
+    logger.info("profile_create email=%s user_id=%s", profile.email, user_id)
 
     # Try insert first. If a concurrent request already created this email,
     # the unique constraint fires an IntegrityError and we fall back to update.
@@ -159,6 +170,7 @@ def create_profile(
         return _profile_to_response(db_profile)
     except IntegrityError:
         db.rollback()
+        logger.warning("profile_create_integrity_fallback email=%s", profile.email)
         existing = db.query(models.Student).filter(
             models.Student.email == profile.email
         ).first()
@@ -179,8 +191,10 @@ def get_profile(
 ):
     profile = db.query(models.Student).filter(models.Student.id == profile_id).first()
     if not profile:
+        logger.warning("profile_get_not_found profile_id=%s", profile_id)
         raise HTTPException(status_code=404, detail="Profile not found")
     if user_id is not None and profile.user_id is not None and profile.user_id != user_id:
+        logger.warning("profile_access_denied profile_id=%s user_id=%s", profile_id, user_id)
         raise HTTPException(status_code=403, detail="Access denied")
     return _profile_to_response(profile)
 

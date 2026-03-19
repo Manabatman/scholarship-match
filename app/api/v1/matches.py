@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Depends, Request
@@ -11,6 +12,7 @@ from app.api.v1.scholarships import get_cached_scholarship_dicts
 from app.matching.match_service import MatchService
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 match_service = MatchService()
 
 
@@ -25,6 +27,7 @@ def get_matches(
     """Get ranked matches for a profile. Requires auth in production; must own profile."""
     profile = get_profile_dict(profile_id, db)
     if not profile:
+        logger.warning("matches_profile_not_found profile_id=%s", profile_id)
         raise HTTPException(status_code=404, detail="Profile not found")
     if user_id is not None:
         require_profile_owner(profile_id, user_id, db)

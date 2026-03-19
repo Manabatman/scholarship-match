@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -6,8 +7,10 @@ import json
 import time
 
 from app import models, schemas
-from app.auth import get_current_user_id
+from app.auth import get_current_user, require_admin
+from app.config import settings
 from app.db import get_db
+from app.utils.sanitize import strip_tags
 from app.limiter import limiter
 
 router = APIRouter()
@@ -107,12 +110,12 @@ def _scholarship_to_dict(s):
 def create_scholarship(
     scholarship: schemas.Scholarship,
     db: Session = Depends(get_db),
-    user_id: Annotated[int | None, Depends(get_current_user_id)] = None,
+    _admin: Annotated[models.User | None, Depends(require_admin)] = None,
 ):
     db_scholarship = models.Scholarship(
-        title=scholarship.title,
-        provider=scholarship.provider,
-        source=scholarship.source,
+        title=strip_tags(scholarship.title) or scholarship.title,
+        provider=strip_tags(scholarship.provider) or scholarship.provider if scholarship.provider else None,
+        source=strip_tags(scholarship.source) or scholarship.source if scholarship.source else None,
         countries=",".join(scholarship.countries or []),
         regions=",".join(scholarship.regions or []),
         min_age=scholarship.min_age,
@@ -120,7 +123,7 @@ def create_scholarship(
         needs_tags=json.dumps(scholarship.needs_tags or []),
         level=scholarship.level,
         link=scholarship.link,
-        description=scholarship.description,
+        description=strip_tags(scholarship.description) or scholarship.description if scholarship.description else None,
         provider_type=scholarship.provider_type,
         scholarship_type=scholarship.scholarship_type,
         eligible_levels=json.dumps(scholarship.eligible_levels or []),
@@ -159,10 +162,13 @@ def list_scholarships(
     request: Request,
     include_inactive: bool = False,
     db: Session = Depends(get_db),
-    user_id: Annotated[int | None, Depends(get_current_user_id)] = None,
+    user: Annotated[models.User | None, Depends(get_current_user)] = None,
 ):
-    """List scholarships. When include_inactive=true and authenticated, returns all."""
-    if include_inactive and user_id is not None:
+    """List scholarships. Public for active only. include_inactive=true requires admin."""
+    if include_inactive:
+        if not settings.auth_disabled and (user is None or getattr(user, "role", "student") != "admin"):
+            logger.warning("scholarships_list_include_inactive_denied reason=admin_required")
+            raise HTTPException(status_code=403, detail="Admin role required")
         scholarships = db.query(models.Scholarship).all()
         return [_scholarship_to_response(s) for s in scholarships]
     return get_cached_scholarship_dicts(db)
@@ -175,6 +181,7 @@ def get_scholarship(
 ):
     s = db.query(models.Scholarship).filter(models.Scholarship.id == scholarship_id).first()
     if not s:
+        logger.warning("scholarships_get_not_found scholarship_id=%s", scholarship_id)
         raise HTTPException(status_code=404, detail="Scholarship not found")
     return _scholarship_to_response(s)
 
@@ -184,14 +191,15 @@ def update_scholarship(
     scholarship_id: int,
     scholarship: schemas.Scholarship,
     db: Session = Depends(get_db),
-    user_id: Annotated[int | None, Depends(get_current_user_id)] = None,
+    _admin: Annotated[models.User | None, Depends(require_admin)] = None,
 ):
     s = db.query(models.Scholarship).filter(models.Scholarship.id == scholarship_id).first()
     if not s:
+        logger.warning("scholarships_update_not_found scholarship_id=%s", scholarship_id)
         raise HTTPException(status_code=404, detail="Scholarship not found")
-    s.title = scholarship.title
-    s.provider = scholarship.provider
-    s.source = scholarship.source
+    s.title = strip_tags(scholarship.title) or scholarship.title
+    s.provider = strip_tags(scholarship.provider) or scholarship.provider if scholarship.provider else None
+    s.source = strip_tags(scholarship.source) or scholarship.source if scholarship.source else None
     s.countries = ",".join(scholarship.countries or [])
     s.regions = ",".join(scholarship.regions or [])
     s.min_age = scholarship.min_age
@@ -199,7 +207,7 @@ def update_scholarship(
     s.needs_tags = json.dumps(scholarship.needs_tags or [])
     s.level = scholarship.level
     s.link = scholarship.link
-    s.description = scholarship.description
+    s.description = strip_tags(scholarship.description) or scholarship.description if scholarship.description else None
     s.provider_type = scholarship.provider_type
     s.scholarship_type = scholarship.scholarship_type
     s.eligible_levels = json.dumps(scholarship.eligible_levels or [])
@@ -235,10 +243,11 @@ def update_scholarship(
 def delete_scholarship(
     scholarship_id: int,
     db: Session = Depends(get_db),
-    user_id: Annotated[int | None, Depends(get_current_user_id)] = None,
+    _admin: Annotated[models.User | None, Depends(require_admin)] = None,
 ):
     s = db.query(models.Scholarship).filter(models.Scholarship.id == scholarship_id).first()
     if not s:
+        logger.warning("scholarships_delete_not_found scholarship_id=%s", scholarship_id)
         raise HTTPException(status_code=404, detail="Scholarship not found")
     s.is_active = False
     db.commit()

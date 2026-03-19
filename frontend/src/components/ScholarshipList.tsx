@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { ScholarshipInfo } from "../types";
-
-const API_BASE_URL =
-  (import.meta as unknown as { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL ?? "http://localhost:8000";
+import { apiFetch } from "../api/client";
 
 function ScholarshipBrowseCard({ s }: { s: ScholarshipInfo }) {
   const link = s.link && s.link.trim() ? s.link : "#";
@@ -102,7 +100,7 @@ export function ScholarshipList(_props?: ScholarshipListProps) {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetch(`${API_BASE_URL}/api/v1/scholarships`)
+    apiFetch("/api/v1/scholarships")
       .then((res) => {
         if (!res.ok) throw new Error("Unable to fetch scholarships");
         return res.json();
